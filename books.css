@@ -1,0 +1,91 @@
+body
+{
+    background-color: #d8d8d8;
+    margin: 10px 10px 10px 10px;
+    padding:  5px 5px 5px 5px;
+}
+
+.container{
+    position: relative;
+    padding: 0px 50px 10px 20px;
+}
+div.main
+{
+    background: #550000;
+    height: 1200px;
+    width: 900px;
+    border-radius: 15px;
+    border: 2px solid yellow;
+    position: absolute;
+    left: 360px;
+}
+
+div.internal
+{
+    color: white;
+    border-radius: 15px;
+    border: 2px solid yellow;
+    margin: 25px 20px 25px 20px;
+    padding: 0px 0px 0px 0px;
+    background-color: #d8d8d8;
+    margin: 25px 20px 25px 20px;
+}
+div.nav_elements{
+    background: #550000;   
+    padding: 15px 15px 10px 10px;
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
+}
+a.nav_element
+{
+    color: white;
+}
+table.nav_element{
+    border-width: 0px;
+    color: white;
+}
+table.nav_element td{
+    color: white;
+}
+
+table.nav_element td.spacy{
+    color: white;
+    padding: 5px 30px 5px 30px;
+}
+div.nav
+{
+    background: #550000;
+    height: 1200px;
+    width: 300px;
+    border-radius: 15px;
+    border: 2px solid yellow;
+    position: absolute;
+}
+div.banner
+{
+    height:180px;
+    border-top-left-radius: 13px;
+    border-top-right-radius: 13px;
+    background-image: url(metall_texture_elements_background.jpg);
+}
+
+div.navtitle
+{
+    background-color: #d8d8d8;
+    text-shadow: #000 2px 1px 1px;
+}
+
+h1.title
+{
+    text-align: center;
+    vertical-align: middle;
+    font-size: 72px;
+    margin: auto;
+    padding: 45px;
+}
+
+p 
+{
+    margin: 10px 5px 15px 5px;
+}
+
