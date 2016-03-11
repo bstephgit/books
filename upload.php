@@ -1,11 +1,13 @@
 <?php
 include "db.php";
 include "google_drive.php";
+include "ms_onedrive.php";
+
 
 
 if(isset($_FILES) && isset($_FILES['upfile']))
 {
-    
+
     //$_FILES['upfile']['name']     //Le nom original du fichier, comme sur le disque du visiteur (exemple : mon_icone.png).
     //$_FILES['upfile']['type']     //Le type du fichier. Par exemple, cela peut être « image/png ».
     //$_FILES['upfile']['size']     //La taille du fichier en octets.
@@ -32,10 +34,17 @@ if(isset($_FILES) && isset($_FILES['upfile']))
         $dbase->query("INSERT INTO BOOKS (TITLE,PUB,DESCR,AUTHORS) VALUES('$title','$pub','$descr','$author')");
     }
 	try{
-		$ggl_drive_client=new GoogleDriveHelper();
-		$ggl_drive_client->setFileName($_FILES['upfile']['name']);
-		$ggl_drive_client->login();
-		if(!$ggl_drive_client->uploadFile())
+		if($_GET['store']=='msft')
+		{
+			$store=new GoogleDriveHelper();
+		}
+		else
+		{
+			$store=new MSOneDriveHelper();
+		}
+		$store->setFileName($_FILES['upfile']['name']);
+		$store->login();
+		if(!$store->uploadFile())
 		{
 			header('Location: home.php?erreur=UPLOADGOOGLEERROR');
 		}
@@ -49,6 +58,6 @@ if(isset($_FILES) && isset($_FILES['upfile']))
     	//echo $e->getTraceAsString();           // Formated string of trace
 		exit();
 	}
-    //header('Location: home.php');
+    header('Location: home.php?done=2');
 }
 ?>

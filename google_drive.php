@@ -57,7 +57,7 @@ session_start();
 			}
 		} else {
 			$authUrl = $client->createAuthUrl();
-			$_SESSION['GG_UploadFile']=$this->getFileName();
+			$_SESSION['GG_UploadFile']=$this->drive_file->getName();
 			header('Location: ' . filter_var($authUrl, FILTER_SANITIZE_URL));
 		}
 	}
@@ -74,7 +74,7 @@ session_start();
 	 {
 		 $client_id = '76824108658-qopibc57hedf4k4he7rlateis2bkoigv.apps.googleusercontent.com';
 		 $client_secret = '444KL-z0e_JZR8_PBu_vXvKH';
-		 $redirect_uri = 'http://albertdupre.kappatau.fr/books/google_drive.php?callbackAuth';
+		 $redirect_uri = 'http://albertdupre.esy.es/books/google_drive.php?callbackAuth';
 
 		 $client = new Google_Client();
 		 $client->setClientId($client_id);
@@ -86,8 +86,9 @@ session_start();
     public function uploadFile()
     {
 		$file_name = $this->drive_file->getName();
-		$this->drive_file->setDescription('uploaded from server');
-		$this->drive_file->setSize(filesize('temp/'.$file_name));
+		$this->drive_file->setParents( array($this->getDestFolder("Books")->getId()) );
+		//$this->drive_file->setDescription('uploaded from server');
+		//$this->drive_file->setSize(filesize('temp/'.$file_name));
 		$size_mo = $this->drive_file->getSize() / (1024*1024);
 		if($size_mo>5)
 		{
@@ -108,7 +109,7 @@ session_start();
 					array(
 						'data' => file_get_contents('temp/'.$this->drive_file->getName()),
 						'mimeType' => 'application/octet-stream',
-						'uploadType' => 'media'
+						'uploadType' => 'multipart'
 					)
 				);
 		}
@@ -171,13 +172,30 @@ session_start();
         }
         return $giantChunk;
     }
+	private function getDestFolder($name)
+	{
+		$file=$this->google_drive_service->files->listFiles(array('q'=>"name='$name' and mimeType='application/vnd.google-apps.folder'"));
+		if($file->count()==0)
+		{
+			$file=new Google_Service_Drive_DriveFile();
+			$file->setName($name);
+			$file->setMimeType('application/vnd.google-apps.folder');
+			$file=$this->google_drive_service->files->create($file,array("mimeType"=>'application/vnd.google-apps.folder'));
+		}
+		else
+		{
+			$file=$file->current();
+		}
+		return $file;
+	}
 }
 
 
 if(isset($_GET['callbackAuth']))
 {
 	$gg_upload_helper = new GoogleDriveHelper();
-	$gg_upload_helper->setFileName(	$_SESSION['GG_UploadFile'] );
+	$gg_upload_helper->setFileName($_SESSION['GG_UploadFile']);
+
 	try{
 		if($gg_upload_helper){
 			$gg_upload_helper->login();
@@ -191,7 +209,7 @@ if(isset($_GET['callbackAuth']))
 	unset($_GET['callbackAuth']);
 	unset($_SESSION['GG_UploadFile']);
 
-	//header('Location: home.php?done=1');
+	header('Location: home.php?done=1');
 }
 
 ?>
