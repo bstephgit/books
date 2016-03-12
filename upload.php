@@ -1,9 +1,6 @@
 <?php
 include "db.php";
-include "google_drive.php";
-include "ms_onedrive.php";
-
-
+include "drive_client.php";
 
 if(isset($_FILES) && isset($_FILES['upfile']))
 {
@@ -33,31 +30,6 @@ if(isset($_FILES) && isset($_FILES['upfile']))
         $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
         $dbase->query("INSERT INTO BOOKS (TITLE,PUB,DESCR,AUTHORS) VALUES('$title','$pub','$descr','$author')");
     }
-	try{
-		if($_GET['store']=='msft')
-		{
-			$store=new GoogleDriveHelper();
-		}
-		else
-		{
-			$store=new MSOneDriveHelper();
-		}
-		$store->setFileName($_FILES['upfile']['name']);
-		$store->login();
-		if(!$store->uploadFile())
-		{
-			header('Location: home.php?erreur=UPLOADGOOGLEERROR');
-		}
-	}
-	catch(Exception $e)
-	{
-		//header('Location: home.php?erreur='.urlencode($e->getMessage()));
-		echo $e->getMessage();
-		//echo $e->getFile();                    // Source filename
-		//echo $e->getLine();                    // Source line
-    	//echo $e->getTraceAsString();           // Formated string of trace
-		exit();
-	}
-    header('Location: home.php?done=2');
+	createDriveClient($_POST['store'],$_FILES['upfile']['name']);
 }
 ?>

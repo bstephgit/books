@@ -100,11 +100,11 @@ function print_subjects_tab($base)
                 </table>           
                 <div class="nav_elements">
                         <p>Store<br>
-                        <input type="radio" name="store" value="goog" checked> Google drive<br>
-                        <input type="radio" name="store" value="msft"> MS OneDrive<br>
-                        <input type="radio" name="store" value="amzn"> Amazon<br>
-                        <input type="radio" name="store" value="box"> Box.com<br>
-                        <input type="radio" name="store" value="pcld"> pCloud  </p>
+                        <input type="radio" name="store" value="GOOG" checked> Google drive<br>
+                        <input type="radio" name="store" value="MSFT"> MS OneDrive<br>
+                        <input type="radio" name="store" value="AMZN"> Amazon<br>
+                        <input type="radio" name="store" value="BOX"> Box.com<br>
+                        <input type="radio" name="store" value="PCLD"> pCloud  </p>
                     </div>
                 <div class="nav_elements">
                     <?php print_subjects_tab($base); ?>

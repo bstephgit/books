@@ -3,6 +3,8 @@ set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-p
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-php-client/src/Google'));
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-php-client/src/Google/Service'));
 
+include "drive_client.php"
+
 require_once realpath('../google-api-php-client/src').'/Google/Auth/OAuth2.php';
 require_once realpath('../google-api-php-client/src').'/Google/Client.php';
 require_once realpath('../google-api-php-client/src').'/Google/Service.php';
@@ -16,48 +18,52 @@ require_once realpath('../google-api-php-client/src').'/Google/Auth/AssertionCre
 define('DRIVE_SCOPE', 'https://www.googleapis.com/auth/drive');
 define('SERVICE_ACCOUNT_EMAIL', 'incinerator-book-store@velvety-tube-124123.iam.gserviceaccount.com');
 define('SERVICE_ACCOUNT_PKCS12_FILE_PATH', realpath('My Project-2c1987e4809b.json'));
+define('GOOGLE_','GOOG')
 
-session_start();
-
- class GoogleDriveHelper
+ class GoogleDriveHelper extends DriveClient
  {
     private $google_drive_service;
     private $drive_file;
-	private $file_name;
 
     public function __construct()
     {
-        //$this->buildService('tcn75323@gmail.com');
+        parent::__construct();
 		$this->buildAuth();
         $this->drive_file=new Google_Service_Drive_DriveFile();
     }
 	public function setFileName($file_name)
 	{
 		$this->drive_file->setName($file_name);
+        parent::setFileName($file_name);
 	}
+    public function getDriveVendorName()
+    {
+        return return GOOGLE_;
+    }
 	public function login()
 	{
 		$client = $this->google_drive_service->getClient();
 		if (isset($_REQUEST['logout']))
 		{
-			 unset($_SESSION['upload_token']);
+			 $_SESSION[GOOGLE_]['upload_token']=null;
 		}
 
 		if (isset($_GET['code'])) {
 			$client->authenticate($_GET['code']);
-			$_SESSION['upload_token'] = $client->getAccessToken();
+			$_SESSION[GOOGLE_]['upload_token'] = $client->getAccessToken();
 			$redirect = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
 			header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
 		}
 
-		if (isset($_SESSION['upload_token']) && $_SESSION['upload_token']) {
-			$client->setAccessToken($_SESSION['upload_token']);
+		if (isset($_SESSION[GOOGLE_]['upload_token']) && $_SESSION[GOOGLE_]['upload_token']) {
+			$client->setAccessToken($_SESSION[GOOGLE_]['upload_token']);
 			if ($client->isAccessTokenExpired()) {
-				unset($_SESSION['upload_token']);
+			    $_SESSION[GOOGLE_]['upload_token']=null;
 			}
-		} else {
+		}
+        else 
+        {
 			$authUrl = $client->createAuthUrl();
-			$_SESSION['GG_UploadFile']=$this->drive_file->getName();
 			header('Location: ' . filter_var($authUrl, FILTER_SANITIZE_URL));
 		}
 	}
@@ -74,7 +80,7 @@ session_start();
 	 {
 		 $client_id = '76824108658-qopibc57hedf4k4he7rlateis2bkoigv.apps.googleusercontent.com';
 		 $client_secret = '444KL-z0e_JZR8_PBu_vXvKH';
-		 $redirect_uri = 'http://albertdupre.esy.es/books/google_drive.php?callbackAuth';
+		 $redirect_uri = 'http://' .  $_SERVER['HTTP_HOST'] . '/books/google_drive.php?callbackAuth';
 
 		 $client = new Google_Client();
 		 $client->setClientId($client_id);
@@ -191,25 +197,25 @@ session_start();
 }
 
 
-if(isset($_GET['callbackAuth']))
+session_start();
+
+if(!isset($_SESSION[GOOGLE_]))
 {
-	$gg_upload_helper = new GoogleDriveHelper();
-	$gg_upload_helper->setFileName($_SESSION['GG_UploadFile']);
-
-	try{
-		if($gg_upload_helper){
-			$gg_upload_helper->login();
-			$gg_upload_helper->uploadFile();
-		}
-	}
-	catch(Exception $e)
-	{
-		echo $e->getMessage();
-	}
-	unset($_GET['callbackAuth']);
-	unset($_SESSION['GG_UploadFile']);
-
-	header('Location: home.php?done=1');
+    $_SESSION[GOOGLE_] = array(
+        'upload_token' => null,
+        'refresh_token' => null,
+        'current_filename' => null
+    );
 }
 
+
+try{
+    $gg_upload_helper = new GoogleDriveHelper();
+    $gg_upload_helper->login();
+    $gg_upload_helper->uploadFile();
+}
+catch(Exception $e)
+{
+    echo $e->getMessage();
+}
 ?>
