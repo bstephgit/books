@@ -1,4 +1,5 @@
 <?php
+
 class DB
 {
     private $connexion;
@@ -23,7 +24,7 @@ class DB
 	        	$this->connexion = NULL;
 	        }
 	    }
-	    return $connexion;
+	    return $this->connexion;
 	}
     public function close()
     {
@@ -74,6 +75,85 @@ class Record
     public function field_value($field_id)
     {
         return $this->current_row[$field_id];
+    }
+}
+
+class ODBC
+{
+    private $_config;
+    
+    private function __construct()
+    {
+        $this->_config = array('server'=>null,'base'=>null,'user'=>null,'password'=>null);
+    }
+    public function load($file_path)
+    {
+        try{
+            $xml = new XMLReader();
+            if($xml->open($file_path)===false)
+            {
+                throw new Exception('Error opening odbc xml file: '.$file_path);
+            }
+            $this_host=$_SERVER['HTTP_HOST'];
+            $matching_host=false;
+            $current_node_name;
+            while($xml->read())
+            {
+                $current_node_name=$xml->name;
+                if($current_node_name=='host')
+                {
+                    if($xml->nodeType == XMLReader::ELEMENT)
+                    {
+                        $hname=$xml->getAttribute('name');
+                        if($hname!=null)
+                        {
+                            $matching_host=($this_host==$hname);
+                        }
+                    }
+                    if($xml->nodeType == XMLReader::END_ELEMENT)
+                    {
+                        $matching_host=false;
+                    }
+                    
+                }
+                
+                if($matching_host && $xml->nodeType==XMLReader::TEXT)
+                {
+                    if(array_key_exists($current_node_name,$this->_config))
+                    {
+                        $this->_config=$xml->value;
+                    }
+                }
+            }
+            $xml->close();
+            return has_valid_configuration();
+        }
+        catch(Exception $e)
+        {
+            return false;
+        }
+        return true;
+    }
+    public function has_valid_configuration()
+    {
+        return isset($this->_config['server']) && isset($this->_config['base']) && isset($this->_config['user']) && isset($this->_config['password']);
+    }
+    public function connect()
+    {
+        if($this->has_valid_configuration())
+        {
+            $db = new DB();
+            $server=$this->_config['server'];
+            $base=$this->_config['base'];
+            $user=$this->_config['user'];
+            $password=$this->_config['password'];
+            $db->connect($server,$user,$password,$base);
+            if($db->is_connected())
+            {
+                return db;
+            }
+        }
+        return null;
     }
 }
 ?>

@@ -2,6 +2,14 @@
 include "db.php";
 include "drive_client.php";
 
+if(isset($_SESSION['ODBC']))
+{
+    $odbc=new ODBC();
+    if($odbc->load('odbc.xml'))
+    {
+        $_SESSION['ODBC']=$odbc;
+    }
+}
 if(isset($_FILES) && isset($_FILES['upfile']))
 {
 
@@ -23,13 +31,18 @@ if(isset($_FILES) && isset($_FILES['upfile']))
         mkdir($temp_dir);
     }
     $resultat = move_uploaded_file($_FILES['upfile']['tmp_name'],$temp_dir.'/'.$_FILES['upfile']['name']);
-    $dbase = new DB();
-    $dbase->connect("localhost","590_albertdupre","Isa150771?","590_albertdupre");
-    if($dbase->is_connected())
+    
+    if(isset($_SESSION['ODBC']))
     {
-        $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
-        $dbase->query("INSERT INTO BOOKS (TITLE,PUB,DESCR,AUTHORS) VALUES('$title','$pub','$descr','$author')");
+        $dbase = $_SESSION['ODBC']->connect();
+        if($dbase!=null)
+        {
+            $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
+            $size=$_FILES['upfile']['size'];$year=$_POST['year'];
+            $dbase->query("INSERT INTO BOOKS (TITLE,PUB,DESCR,AUTHORS,SIZE) VALUES('$title','$pub','$descr','$author',$size,$year)");
+        }
     }
+    
 	createDriveClient($_POST['store'],$_FILES['upfile']['name']);
 }
 ?>

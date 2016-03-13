@@ -95,7 +95,7 @@ function print_subjects_tab($base)
                     <tr><td colspan="3"><input type="file" name="upfile"></td></tr>
                     <tr><td>Titre<br> <input type="text" name="title"> </td>
                     <td>Auteur<br> <input type="text" name="author"> </td>
-                    <td>Ann&eacute;e de parution<br> <input type="text" name="pub"></td></tr> 
+                    <td>Ann&eacute;e de parution<br> <input type="text" name="year"></td></tr> 
                     <tr><td colspan="3">Description<br><textarea rows="5" cols="90" name="descr"></textarea></td></tr>
                 </table>           
                 <div class="nav_elements">
