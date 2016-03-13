@@ -2,7 +2,7 @@
 
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../onedrive-php-sdk/src/Krizalys/Onedrive/'));
 
-include "drive_client.php"
+include "drive_client.php";
 
 require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/Object.php');
 require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/Client.php');
@@ -14,7 +14,7 @@ session_start();
 define('CLIENT_ID','000000004018962B');
 define('REDIRECT_URL','http://' . $_SERVER['HTTP_HOST'] . '/books/ms_onedrive.php');
 define('CLIENT_SECRET','XZxVArudOBTAcEvWlO4zlE4bBXCkfm5P');
-define('MS_ONEDRIVE_','MSOD')
+define('MS_ONEDRIVE_','MSOD');
 
 class MSOneDriveHelper extends DriveClient
 {
@@ -23,9 +23,9 @@ class MSOneDriveHelper extends DriveClient
 	public function __construct()
 	{
         parent::__construct();
-		if(isset($_SESSION['onedrive.client.state']))
+		if(isset($_SESSION[MS_ONEDRIVE_]['onedrive.client.state']))
 		{
-			$option = array('client_id' => CLIENT_ID,'state' => $_SESSION[MS_ONEDRIVE_]['onedrive.client.state']);
+			$option = array('client_id' => CLIENT_ID,'state' => $this->getSessionVar('onedrive.client.state'));
 		}
 		else
 		{
@@ -88,6 +88,7 @@ try
     $store=new MSOneDriveHelper();
     $store->login();
     $store->uploadFile();
+    header('Location: home.php?done=1');
 }
 catch(Exception $e)
 {

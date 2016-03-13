@@ -3,7 +3,7 @@ set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-p
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-php-client/src/Google'));
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-php-client/src/Google/Service'));
 
-include "drive_client.php"
+include "drive_client.php";
 
 require_once realpath('../google-api-php-client/src').'/Google/Auth/OAuth2.php';
 require_once realpath('../google-api-php-client/src').'/Google/Client.php';
@@ -18,7 +18,7 @@ require_once realpath('../google-api-php-client/src').'/Google/Auth/AssertionCre
 define('DRIVE_SCOPE', 'https://www.googleapis.com/auth/drive');
 define('SERVICE_ACCOUNT_EMAIL', 'incinerator-book-store@velvety-tube-124123.iam.gserviceaccount.com');
 define('SERVICE_ACCOUNT_PKCS12_FILE_PATH', realpath('My Project-2c1987e4809b.json'));
-define('GOOGLE_','GOOG')
+define('GOOGLE_','GOOG');
 
  class GoogleDriveHelper extends DriveClient
  {
@@ -27,9 +27,9 @@ define('GOOGLE_','GOOG')
 
     public function __construct()
     {
+        $this->drive_file=new Google_Service_Drive_DriveFile();        
         parent::__construct();
 		$this->buildAuth();
-        $this->drive_file=new Google_Service_Drive_DriveFile();
     }
 	public function setFileName($file_name)
 	{
@@ -38,7 +38,7 @@ define('GOOGLE_','GOOG')
 	}
     public function getDriveVendorName()
     {
-        return return GOOGLE_;
+        return GOOGLE_;
     }
 	public function login()
 	{
@@ -55,7 +55,7 @@ define('GOOGLE_','GOOG')
 			header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
 		}
 
-		if (isset($_SESSION[GOOGLE_]['upload_token']) && $_SESSION[GOOGLE_]['upload_token']) {
+		if (isset($_SESSION[GOOGLE_]['upload_token'])) {
 			$client->setAccessToken($_SESSION[GOOGLE_]['upload_token']);
 			if ($client->isAccessTokenExpired()) {
 			    $_SESSION[GOOGLE_]['upload_token']=null;
@@ -213,6 +213,7 @@ try{
     $gg_upload_helper = new GoogleDriveHelper();
     $gg_upload_helper->login();
     $gg_upload_helper->uploadFile();
+    header('Location: home.php?done=1');
 }
 catch(Exception $e)
 {
