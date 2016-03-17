@@ -96,12 +96,13 @@ class ODBC
             }
             $this_host=$_SERVER['HTTP_HOST'];
             $matching_host=false;
+            $element_name='';
             while($xml->read())
             {
-                $current_node_name=$xml->name;
-                if($current_node_name=='host')
+                if($xml->nodeType==XMLReader::ELEMENT)
                 {
-                    if($xml->nodeType == XMLReader::ELEMENT)
+                    $element_name=$xml->name;
+                    if($element_name=='host')
                     {
                         $hname=$xml->getAttribute('name');
                         if($hname!=null)
@@ -109,23 +110,25 @@ class ODBC
                             $matching_host=($this_host==$hname);
                         }
                     }
-                    if($xml->nodeType == XMLReader::END_ELEMENT)
+                }
+                if($xml->nodeType == XMLReader::END_ELEMENT)
+                {
+                    if($element_name=='host')
                     {
                         $matching_host=false;
                     }
-                    
+                    $element_name='';
                 }
-                
                 if($matching_host && $xml->nodeType==XMLReader::TEXT)
                 {
-                    if(array_key_exists($current_node_name,$this->_config))
+                    if(array_key_exists($element_name,$this->_config))
                     {
-                        $this->_config=$xml->value;
+                        $this->_config[$element_name]=$xml->value;
                     }
                 }
             }
             $xml->close();
-            return has_valid_configuration();
+            return $this->has_valid_configuration();
         }
         catch(Exception $e)
         {
@@ -149,10 +152,40 @@ class ODBC
             $db->connect($server,$user,$password,$base);
             if($db->is_connected())
             {
-                return db;
+                return $db;
             }
         }
         return null;
     }
+    
+    public function print_()
+    {
+        echo var_dump($this->_config);
+    }
 }
+
+function loadOdbc()
+{
+    unset ($_SESSION['ODBC']);
+    if(!isset($_SESSION['ODBC']))
+    {
+        $odbc=new ODBC();
+        if($odbc->load('odbc.xml'))
+        {
+            $_SESSION['ODBC']=$odbc;
+        }
+    }
+}
+
+function odbc_connectDatabase()
+{
+    $base=null;
+    if(isset($_SESSION['ODBC']))
+    {
+        $odbc=$_SESSION['ODBC'];
+        $base = $odbc->connect();
+    }
+    return $base;
+}
+
 ?>

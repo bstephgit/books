@@ -5,8 +5,8 @@ function ChunkedUploader(file, options) {
  
     this.file = file;
  
-    this.options = $.extend({
-        url: '/upload'
+    this.options = Object.assign({
+        url: '/books/upload.php'
     }, options);
  
     this.file_size = this.file.size;
@@ -25,7 +25,19 @@ function ChunkedUploader(file, options) {
     }
  
     this.upload_request = new XMLHttpRequest();
-    this.upload_request.onload = this._onChunkComplete;
+    var self=this;
+    this.upload_request.onload = function (){ self._onChunkComplete(); };
+    
+    this.upload_request.addEventListener('progress', function(e) {
+
+        console.log((100 * (e.position + self.range_start) / self.file_size ) + '%');        
+        document.getElementById('upl-in1').style.width = (100 * (e.position + self.range_start) / self.file_size ) + '%';
+    });
+    this.upload_request.onerror = function(e){ 
+        //alert('erreur '+e); 
+        
+        alert(e);
+    };
 }
  
 ChunkedUploader.prototype = {
@@ -45,14 +57,19 @@ ChunkedUploader.prototype = {
  
             chunk = self.file[self.slice_method](self.range_start, self.range_end);
  
-            self.upload_request.open('PUT', self.options.url, true);
-            self.upload_request.overrideMimeType('application/octet-stream');
+            console.log('upload to ' + self.options.url + ' range=('+self.range_start+','+self.range_end+')');
+
+            self.upload_request.open('POST', self.options.url, true);
+            //self.upload_request.overrideMimeType('application/octet-stream');
+            //self.upload_request.overrideMimeType('multipart/form-data; boundary=-------------------------acebdf13572468');
  
             if (self.range_start !== 0) {
                 self.upload_request.setRequestHeader('Content-Range', 'bytes ' + self.range_start + '-' + self.range_end + '/' + self.file_size);
             }
- 
-            self.upload_request.send(chunk);
+            var formData = new FormData();
+            var data = new Blob([chunk]);
+            formData.append("upfile", data, self.file.name);
+            self.upload_request.send(formData);
  
             // TODO
             // From the looks of things, jQuery expects a string or a map
@@ -72,10 +89,19 @@ ChunkedUploader.prototype = {
  
 // Event Handlers ____________________________________________________
  
+    _onUploadComplete: function() {
+        
+        
+        alert('Upload complete');
+        var submit_btn = document.getElementById('submit_btn');
+        submit_btn.setAttribute('disabled', false);
+    },
+    
     _onChunkComplete: function() {
         // If the end range is already the same size as our file, we
         // can assume that our last chunk has been processed and exit
         // out of the function.
+        console.log('chunk complete (' + this.range_start + ',' + this.range_end + ')');
         if (this.range_end === this.file_size) {
             this._onUploadComplete();
             return;
@@ -106,3 +132,36 @@ ChunkedUploader.prototype = {
         this._upload();
     }
 };
+
+document.addEventListener("DOMContentLoaded", function() {
+    
+    var upload_form = document.getElementById('form_upload');
+    var file_input = document.getElementById('file_upload');
+    var submit_btn = document.getElementById('submit_btn');
+ 
+    file_input.onchange = onFilesSelected;
+    //upload_form.on('submit', onFormSubmit);
+    submit_btn.onclick = onFormSubmit;
+    /**
+     * Loops through the selected files, displays their file name and size
+     * in the file list, and enables the submit button for uploading.
+     */
+    var uploader;
+    function onFilesSelected(e) {
+        var file = e.target.files[0];
+        
+        uploader = new ChunkedUploader(file);
+    }
+ 
+    /**
+     * Loops through all known uploads and starts each upload
+     * process, preventing default form submission.
+     */
+    function onFormSubmit(e) {
+        uploader.start();
+        // Prevent default form submission
+        //e.preventDefault();
+        submit_btn.setAttribute('disabled', true);
+        
+    }
+});

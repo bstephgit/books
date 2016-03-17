@@ -1,16 +1,9 @@
 <?php
 include "db.php";
 
-$base=null;
-if(!isset($_SESSION['ODBC']))
-{
-    $odbc=new ODBC();
-    if($odbc->load('odbc.xml'))
-    {
-        $_SESSION['ODBC']=$odbc;
-        $base = $_SESSION['ODBC']->connect();
-    }
-}
+session_start();
+
+loadOdbc();
 
 function print_subjects_tab($base)
 {
@@ -40,6 +33,7 @@ function print_subjects_tab($base)
 <head>
     
     <link type="text/css" rel="stylesheet" href="books.css"/>
+    <script type='text/javascript' src='script.js'></script>
 </head>
 <body>
 <div class="container">
@@ -66,7 +60,8 @@ function print_subjects_tab($base)
         <div class="nav_elements">
             <div>
             <?php 
-                if($base->is_connected())
+                $base=odbc_connectDatabase();
+                if($base && $base->is_connected())
                 {
                     $rec = $base->query('SELECT ID,NAME FROM IT_SUBJECT');
                     if($rec)
@@ -80,6 +75,7 @@ function print_subjects_tab($base)
                     else {
                         echo mysql_error();
                     }
+                    $base->close();
                 }
             ?>
             </div>
@@ -95,12 +91,13 @@ function print_subjects_tab($base)
 
 <div class="main">
     <div class="banner"><h1 class="title">BOOK STORE</h1></div>
+
     <?php  if (isset($_GET) && isset($_GET['upload'])){   ?>
         <div class='internal'>
         <div class="nav_elements">
-            <form method="POST" action="upload.php" enctype="multipart/form-data">
+            <!-- <form method="POST" action="upload.php" id="form_upload"> -->
                 <table class="nav_element" cellpadding="15">
-                    <tr><td colspan="3"><input type="file" name="upfile"></td></tr>
+                    <tr><td><input type="file" id="file_upload"></td><td colspan="2"><div class='upload-out'><div class='upload-in' id='upl-in1'><div></div></td></tr>
                     <tr><td>Titre<br> <input type="text" name="title"> </td>
                     <td>Auteur<br> <input type="text" name="author"> </td>
                     <td>Ann&eacute;e de parution<br> <input type="text" name="year"></td></tr> 
@@ -115,10 +112,10 @@ function print_subjects_tab($base)
                         <input type="radio" name="store" value="PCLD"> pCloud  </p>
                     </div>
                 <div class="nav_elements">
-                    <?php print_subjects_tab($base); ?>
+                    <?php  $base=odbc_connectDatabase(); if($base){ print_subjects_tab($base); $base->close();}?>
                 </div>
-                <p><input type="submit" value='uploader'></p>
-            </form>
+                <p><input type="submit" value='uploader' id='submit_btn'></p>
+            <!-- </form> -->
         </div>
     </div>
     <?php } ?>
