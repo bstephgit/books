@@ -82,7 +82,7 @@ class ODBC
 {
     private $_config;
     
-    private function __construct()
+    public function __construct()
     {
         $this->_config = array('server'=>null,'base'=>null,'user'=>null,'password'=>null);
     }
@@ -96,7 +96,6 @@ class ODBC
             }
             $this_host=$_SERVER['HTTP_HOST'];
             $matching_host=false;
-            $current_node_name;
             while($xml->read())
             {
                 $current_node_name=$xml->name;

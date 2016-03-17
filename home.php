@@ -1,12 +1,20 @@
 <?php
 include "db.php";
 
-$base = new DB();
-$base->connect("localhost","590_albertdupre","Isa150771?","590_albertdupre");
+$base=null;
+if(!isset($_SESSION['ODBC']))
+{
+    $odbc=new ODBC();
+    if($odbc->load('odbc.xml'))
+    {
+        $_SESSION['ODBC']=$odbc;
+        $base = $_SESSION['ODBC']->connect();
+    }
+}
 
 function print_subjects_tab($base)
 {
-    if($base->is_connected())
+    if($base && $base->is_connected())
     {
         $rec=$base->query('SELECT ID,NAME FROM IT_SUBJECT');
         echo '<table class="nav_element">';

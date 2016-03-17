@@ -32,6 +32,12 @@ if(isset($_FILES) && isset($_FILES['upfile']))
     }
     $resultat = move_uploaded_file($_FILES['upfile']['tmp_name'],$temp_dir.'/'.$_FILES['upfile']['name']);
     
+    $img_dir='img';
+    if(!is_dir($img_dir))
+    {
+        mkdir($img_dir);
+    }
+    
     if(isset($_SESSION['ODBC']))
     {
         $dbase = $_SESSION['ODBC']->connect();
@@ -39,7 +45,9 @@ if(isset($_FILES) && isset($_FILES['upfile']))
         {
             $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
             $size=$_FILES['upfile']['size'];$year=$_POST['year'];
-            $dbase->query("INSERT INTO BOOKS (TITLE,PUB,DESCR,AUTHORS,SIZE) VALUES('$title','$pub','$descr','$author',$size,$year)");
+            $hash=hash_file('md5',$temp_dir . '/' . $_FILES['upfile']['name']);
+            $dbase->query("INSERT INTO BOOKS (TITLE,PUB,DESCR,AUTHORS,SIZE,YEAR,HASH) VALUES('$title','$pub','$descr','$author',$size,$year,$hash)");
+            $dbase->close();
         }
     }
     
