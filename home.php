@@ -95,14 +95,17 @@ function print_subjects_tab($base)
     <?php  if (isset($_GET) && isset($_GET['upload'])){   ?>
         <div class='internal'>
         <div class="nav_elements">
-            <!-- <form method="POST" action="upload.php" id="form_upload"> -->
+            <form method="POST" action="upload.php" id="form_upload">
                 <table class="nav_element" cellpadding="15">
                     <tr><td><input type="file" id="file_upload"></td><td colspan="2"><div class='upload-out'><div class='upload-in' id='upl-in1'><div></div></td></tr>
                     <tr><td>Titre<br> <input type="text" name="title"> </td>
                     <td>Auteur<br> <input type="text" name="author"> </td>
                     <td>Ann&eacute;e de parution<br> <input type="text" name="year"></td></tr> 
                     <tr><td colspan="3">Description<br><textarea rows="5" cols="90" name="descr"></textarea></td></tr>
-                </table>           
+                </table>
+                <input type='hidden' name='file_name' id='fname'>
+                <input type='hidden' name='file_size' id='fsize'>
+                <input type='hidden' name='file_action' value='file_insert'>
                 <div class="nav_elements">
                         <p>Store<br>
                         <input type="radio" name="store" value="GOOG" checked> Google drive<br>
@@ -115,7 +118,7 @@ function print_subjects_tab($base)
                     <?php  $base=odbc_connectDatabase(); if($base){ print_subjects_tab($base); $base->close();}?>
                 </div>
                 <p><input type="submit" value='uploader' id='submit_btn'></p>
-            <!-- </form> -->
+            </form>
         </div>
     </div>
     <?php } ?>

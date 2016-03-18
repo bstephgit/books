@@ -7,91 +7,6 @@ loadOdbc();
 $temp_dir='temp';
 $img_dir='img';
 
-
-function pdfExctractImg($pdf_name)
-{
-    $begin_tag='<</Subtype/Image/Length';
-    $end_tag='\r\nendstream\rendobj';
-    $file_length=0;
-    $file_content='';
-    $file_img_name='';
-    
-    $pdf_ext=".pdf";
-    $pos=strpos($pdf_ext);
-
-    if( $pos!=false && ($pos+strlen($pdf_ext))==strlen($pdf_name) )
-    {
-        $handle = fopen($temp_dir . '/' .  $pdf_name, "rb");
-        if($handle!=false)
-        {
-            $chunk='';
-            if(searchPattern($handle,$begin_tag))
-            {
-                $c='\0';
-                do{
-                    $c=readNbChar($handle,1);
-                }while($c==' ');
-                
-                while(strlen($c)>0 && ctype_digit($c))
-                {
-                    $c=readNbChar($handle,1);
-                    $file_length .= $c;
-                }
-                if(strlen($file_length)>0)
-                {
-                    $file_length=intval($file_length);
-                }
-                if(searchPattern($handle,'>>stream\r\n'))
-                {
-                    $file_content=readNbChars($handle,$file_length);
-                    $file_img_name=$img_dir . '/' . substr( $pdf_name,0,$pos ) . time();
-                    
-                    $handle_out=fopen($file_img_name,'wb');
-                    fwrite($handle_out,$file_content);
-                    fclose($handle_out);
-                }
-                
-            }
-            fclose($handle);
-        }
-    }
-    return $file_img_name;
-}
-function readNbChars($handle,$nb)
-{
-    $buffer='';
-    $n=0;
-    while(!feof($handle) && $n<$nb)
-    {
-        $buffer .= fread($handle, 1);
-        $n++;
-    }
-    return $buffer;
-}
-function searchPattern($handle,$pattern)
-{
-    $buffer='';
-    //index pattern string
-    $ip=0;
-    
-    while(!feof($handle))
-    {
-        $c = fread($handle, 1);
-        if($c==$pattern[$ip])
-        {
-            $ip++;
-            if($ip>=strlen($pattern))
-            {
-                return true;
-            }
-        }
-        else {
-            $ip=0;
-        }
-    }
-    return false;
-}
-
 function pdfGetImage($pdf_name)
 {
     $pdf_ext=".pdf";
@@ -100,17 +15,25 @@ function pdfGetImage($pdf_name)
     
     //if( $pos!=false && ($pos+strlen($pdf_ext))==strlen($pdf_name) )
     {
-        $img = new Imagik($temp_dir . '/' .$pdf_name);
-        $im->setIteratorIndex(0);
-        $im->setCompression(Imagick::COMPRESSION_JPEG);
-        $im->setCompressionQuality(90);
-        $file_img_name=$img_dir . '/' . substr( $pdf_name,0,$pos ) . time() . '.jpeg';
-        $im->writeImage($file_img_name);
+        $file_img_name = basename($pdf_name,$pdf_ext).'jpeg';
+        $output = '';
+        //exec('gs -q -o ' . $img_dir . '/' . $file_img_name . ' -sDEVICE=jpeg -dPDFFitPage -g200x400 "' . $pdf_name . '" > gs.log');
+        exec('ls -l > gs.log',$output);
+        sleep(2);
+        var_dump($output);
+        
     } 
     return $file_img_name;
 }
 
-
+if(!is_dir($temp_dir))
+{
+    mkdir($temp_dir);
+}
+if(!is_dir($img_dir))
+{
+    mkdir($img_dir);
+}
 if(isset($_FILES) && isset($_FILES['upfile']))
 {
 
@@ -126,25 +49,46 @@ if(isset($_FILES) && isset($_FILES['upfile']))
          exit();
     }
 
-    if(!is_dir($temp_dir))
+    $headers = getallheaders();
+    $resultat=false;
+    if(isset($headers['Content-Range']))
     {
-        mkdir($temp_dir);
+        $range_start=0;
+        $range_end=0;
+        $file_size=0;
+        $filename = $_FILES['upfile']['name'];
+        $filepath='temp/'.$filename;
+        
+        sscanf($headers['Content-Range'],'bytes %d-%d/%d',$range_start,$range_end,$file_size);
+        if($range_start==0 && is_file($filepath))
+        {
+            unlink($filepath);
+        }
+        $hfile = fopen($filepath,'ab');
+        if($hfile)
+        {
+            fwrite($hfile,file_get_contents($_FILES['upfile']['tmp_name']));
+            fclose($hfile);
+        }
     }
-    $resultat = move_uploaded_file($_FILES['upfile']['tmp_name'],$temp_dir.'/'.$_FILES['upfile']['name']);
-    
-    if(!is_dir($img_dir))
+    else 
     {
-        mkdir($img_dir);
+        $resultat = move_uploaded_file($_FILES['upfile']['tmp_name'],$temp_dir.'/'.$_FILES['upfile']['name']);
+        $img=pdfGetImage($_FILES['upfile']['name']);
+        
     }
-    
+	//createDriveClient($_POST['store'],$_FILES['upfile']['name']);
+}
+
+if(isset($_POST['file_action']) && $_POST['file_action']=='file_insert')
+{
     $dbase = odbc_connectDatabase();
     if($dbase!=null)
     {
-        echo 'database is connected<BR>';
         $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
-        $size=$_FILES['upfile']['size'];$year=$_POST['year'];
-        $hash=hash_file('md5',$temp_dir . '/' . $_FILES['upfile']['name']);
-        $img=pdfGetImage($_FILES['upfile']['name']);
+        $size=$_POST['file_size'];$year=$_POST['year'];
+        $hash=hash_file('md5',$temp_dir . '/' . $_FILES['file_name']);
+        $img=pdfGetImage($_FILES['file_name']);
         if(strlen($img)==0)
         {
             $img=$img_dir . '/book250x250.png';
@@ -161,17 +105,6 @@ if(isset($_FILES) && isset($_FILES['upfile']))
     else {
         # code...
         echo 'database is not connected<BR>';
-    }
-    
-	//createDriveClient($_POST['store'],$_FILES['upfile']['name']);
-    
-   
-}
-if($_SERVER['REQUEST_METHOD'] == 'PUT') {
-    parse_str(file_get_contents("php://input"),$request_body);
-    strlen($request_body);
-    foreach (getallheaders() as $name => $value) {
-        echo "$name: $value\n";
     }
 }
 ?>

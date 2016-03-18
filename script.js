@@ -3,6 +3,7 @@ function ChunkedUploader(file, options) {
         return new ChunkedUploader(file, options);
     }
  
+    console.log('create chunk uploader');
     this.file = file;
  
     this.options = Object.assign({
@@ -27,16 +28,9 @@ function ChunkedUploader(file, options) {
     this.upload_request = new XMLHttpRequest();
     var self=this;
     this.upload_request.onload = function (){ self._onChunkComplete(); };
-    
-    this.upload_request.addEventListener('progress', function(e) {
 
-        console.log((100 * (e.position + self.range_start) / self.file_size ) + '%');        
-        document.getElementById('upl-in1').style.width = (100 * (e.position + self.range_start) / self.file_size ) + '%';
-    });
     this.upload_request.onerror = function(e){ 
-        //alert('erreur '+e); 
-        
-        alert(e);
+        alert('erreur\n'+e); 
     };
 }
  
@@ -60,12 +54,10 @@ ChunkedUploader.prototype = {
             console.log('upload to ' + self.options.url + ' range=('+self.range_start+','+self.range_end+')');
 
             self.upload_request.open('POST', self.options.url, true);
-            //self.upload_request.overrideMimeType('application/octet-stream');
-            //self.upload_request.overrideMimeType('multipart/form-data; boundary=-------------------------acebdf13572468');
+            self.upload_request.overrideMimeType('application/octet-stream');
  
-            if (self.range_start !== 0) {
-                self.upload_request.setRequestHeader('Content-Range', 'bytes ' + self.range_start + '-' + self.range_end + '/' + self.file_size);
-            }
+            self.upload_request.setRequestHeader('Content-Range', 'bytes ' + self.range_start + '-' + self.range_end + '/' + self.file_size);
+            
             var formData = new FormData();
             var data = new Blob([chunk]);
             formData.append("upfile", data, self.file.name);
@@ -90,17 +82,18 @@ ChunkedUploader.prototype = {
 // Event Handlers ____________________________________________________
  
     _onUploadComplete: function() {
-        
-        
+        var upload_form = document.getElementById('form_upload');
+        upload_form.submit();
         alert('Upload complete');
         var submit_btn = document.getElementById('submit_btn');
-        submit_btn.setAttribute('disabled', false);
+        submit_btn.disabled = false;
     },
     
     _onChunkComplete: function() {
         // If the end range is already the same size as our file, we
         // can assume that our last chunk has been processed and exit
         // out of the function.
+        document.getElementById('upl-in1').style.width = (100 * this.range_end / this.file_size ) + '%';
         console.log('chunk complete (' + this.range_start + ',' + this.range_end + ')');
         if (this.range_end === this.file_size) {
             this._onUploadComplete();
@@ -137,20 +130,27 @@ document.addEventListener("DOMContentLoaded", function() {
     
     var upload_form = document.getElementById('form_upload');
     var file_input = document.getElementById('file_upload');
-    var submit_btn = document.getElementById('submit_btn');
  
-    file_input.onchange = onFilesSelected;
-    //upload_form.on('submit', onFormSubmit);
-    submit_btn.onclick = onFormSubmit;
+    if(file_input)
+    {
+        file_input.onchange = onFilesSelected;
+    }
+    if(upload_form)
+    {
+        upload_form.onsubmit = onFormSubmit;
+    }
+    
     /**
      * Loops through the selected files, displays their file name and size
      * in the file list, and enables the submit button for uploading.
      */
     var uploader;
     function onFilesSelected(e) {
+        document.getElementById('upl-in1').style.width = '0%';
         var file = e.target.files[0];
-        
         uploader = new ChunkedUploader(file);
+        document.getElementById('fname').value=file.name;
+        document.getElementById('fsize').value=file.size;
     }
  
     /**
@@ -158,10 +158,38 @@ document.addEventListener("DOMContentLoaded", function() {
      * process, preventing default form submission.
      */
     function onFormSubmit(e) {
-        uploader.start();
+        var ok = true;
+        
+        if(ok && upload_form.file_upload.files.length==0)
+        {
+            alert('error: no file selected');
+            ok = false;
+        }
+        if (ok && upload_form.title.value.length==0)
+        {
+            alert('error: no title');
+            ok = false;
+        }
+        if(ok && upload_form.author.value.length==0)
+        {
+            alert('error: no author');
+            ok = false;
+        }
         // Prevent default form submission
-        //e.preventDefault();
-        submit_btn.setAttribute('disabled', true);
+        e.preventDefault();
+        if(ok)
+        {
+            if(uploader)
+            {
+                var submit_btn = document.getElementById('submit_btn');
+                uploader.start();        
+                submit_btn.disabled = true;
+            }
+            else
+            {
+                alert('uploader is not defined');
+            }
+        }
         
     }
 });
