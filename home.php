@@ -5,6 +5,32 @@ session_start();
 
 loadOdbc();
 
+function sizeUnit($input)
+{
+    $size=0;
+    $units=array('bytes','Kb','Mb','Gb','Tb');
+    if(is_string($input))
+    {
+        $size=intval($input);
+    }
+    if(is_int($size))
+    {
+        $size=$input;
+    }
+    
+    $pace=1024;
+
+    for($i=0; i < count($units); $i++)
+    {
+        $next =  $size/$pace;
+        if(intval($next)==0)
+        {
+            return number_format($size,1) . ' ' . $units[$i];
+        }
+        $size = $next;
+    }
+    return number_format(($size*$pace),1) . ' ' . $units[count($units)-1];
+}
 function print_subjects_tab($base)
 {
     if($base && $base->is_connected())
@@ -28,6 +54,28 @@ function print_subjects_tab($base)
     }
 }
 
+function print_book($rec)
+{
+    if($rec && $rec->next())
+    {
+        $title=$rec->field_value('TITLE');
+        $year=$rec->field_value('YEAR');
+        $descr=$rec->field_value('DESCR');
+        $author=$rec->field_value('AUTHORS');
+        $size=$rec->field_value('SIZE');
+        $img_src=$rec->field_value('IMG_PATH');
+        echo "<div class='book_record'><table class='book_record'><tr>";
+        printf("<td width='210px'><img src='%s' class='book'></td>",$img_src);
+        echo '<td>';
+        printf("<div class='book'><span class='book_title'>%s</span></div>",$title);
+        printf("<div class='book'>Auteur: <span>%s</span></div>",$author);
+        printf("<div class='book'>Parution: <span>%s</span></div>",$year);
+        printf("<div class='book'>File size: <span>%s</span></div>",sizeUnit($size));
+        printf("<div class='book'><span class='book_descr'>%s</span></div>",$descr);
+        echo '</td>';
+        echo "</tr></table></div>";
+    }
+}
 ?>
 <html>
 <head>
@@ -92,9 +140,9 @@ function print_subjects_tab($base)
 <div class="main">
     <div class="banner"><h1 class="title">BOOK STORE</h1></div>
 
-    <?php  if (isset($_GET) && isset($_GET['upload'])){   ?>
         <div class='internal'>
-        <div class="nav_elements">
+        <div class="nav_elements" style="border-radius: 15px">
+            <?php  if (isset($_GET) && isset($_GET['upload'])){   ?>
             <form method="POST" action="upload.php" id="form_upload">
                 <table class="nav_element" cellpadding="15">
                     <tr><td><input type="file" id="file_upload"></td><td colspan="2"><div class='upload-out'><div class='upload-in' id='upl-in1'><div></div></td></tr>
@@ -119,9 +167,25 @@ function print_subjects_tab($base)
                 </div>
                 <p><input type="submit" value='uploader' id='submit_btn'></p>
             </form>
+            <?php } ?>
+            
+            <?php  if (isset($_GET) && isset($_GET['bookid'])){ 
+                    $id=$_GET['bookid'];
+                    $dbase = odbc_connectDatabase();
+                    if($dbase->is_connected())
+                    {
+                        $query_str="SELECT TITLE,YEAR,DESCR,AUTHORS,SIZE,IMG_PATH FROM BOOKS WHERE ID=$id";
+                        $rec=$dbase->query($query_str);
+                        print_book($rec);
+                        $dbase->close();
+                    }
+
+            ?>
+                
+            <?php } ?>
+            
         </div>
     </div>
-    <?php } ?>
 </div>
 </div>
 </body>

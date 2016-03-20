@@ -33,8 +33,8 @@ div.internal
 div.nav_elements{
     background: #550000;   
     padding: 15px 15px 10px 10px;
-    border-bottom-left-radius: 13px;
-    border-bottom-right-radius: 13px;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
 }
 a.nav_element
 {
@@ -107,3 +107,33 @@ div.upload-in
     margin: 0px;
 }
 
+
+div.book_record
+{
+    width: 95%;
+}
+table.book_record
+{
+    width: 100%;
+}
+div.book
+{
+    color: white;
+    margin-top: 15px;
+    margin-left: 10%;
+}
+img.book
+{
+    width: 210px;
+    height: 260px;
+}
+
+span.book_title
+{
+    font-size: 32px;
+}
+
+span.book_descr
+{
+    font-style: italic;  
+}

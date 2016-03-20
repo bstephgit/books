@@ -15,14 +15,10 @@ class DB
     public function connect($server,$username,$password,$db_name)
     {
 		$this->close();
-        $this->connexion = @mysql_connect( $server, $username, $password);
-	    if($this->connexion)
+        $this->connexion = @mysqli_connect( $server, $username, $password, $db_name);
+	    if(mysqli_connect_errno())
         {
-	        if(!mysql_select_db($db_name, $this->connexion))
-            {
-	        	mysql_close($this->connexion);
-	        	$this->connexion = NULL;
-	        }
+	        $this->connexion = NULL;
 	    }
 	    return $this->connexion;
 	}
@@ -30,7 +26,7 @@ class DB
     {
         if($this->connexion)
         {
-            mysql_close($this->connexion);
+            mysqli_close($this->connexion);
             $this->connexion = NULL;
         }
     }
@@ -39,9 +35,13 @@ class DB
     {
         if($this->connexion)
         {
-            $response=mysql_query($sql_query,$this->connexion);
+            $response=mysqli_query($this->connexion,$sql_query);
             if($response)
             {
+                if(is_bool($response))
+                {
+                    return mysqli_insert_id($this->connexion);
+                }
                 return new Record($response);
             }
         }
@@ -65,7 +65,7 @@ class Record
     
     public function next()
     {
-        $this->current_row=mysql_fetch_assoc($this->response);
+        $this->current_row=mysqli_fetch_assoc($this->response);
         return $this->current_row;
     }
     public function is_valid()
@@ -74,7 +74,11 @@ class Record
     }
     public function field_value($field_id)
     {
-        return $this->current_row[$field_id];
+        if($this->current_row)
+        {
+            return $this->current_row[$field_id];
+        }
+        return NULL;
     }
 }
 
