@@ -6,4 +6,10 @@
         <user>u804422505_u1</user>
         <password>Isa150771?</password>
     </host>
+    <host name="albertdupre.hebfree.org">
+        <server>localhost</server>
+        <base>albertdupre0</base>
+        <user>albertdupre</user>
+        <password>Motdepasse21!</password>
+    </host>
 </odbc>
