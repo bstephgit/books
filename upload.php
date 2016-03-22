@@ -220,11 +220,11 @@ if(isset($_GET['action']) && $_GET['action']==='book_delete')
     $dbase = odbc_connectDatabase();
     
     $id=$_GET['bookid'];
-    $sql_query="DELETE FROM BOOKS WHERE ID='$id'"; 
+    $sql_query="DELETE FROM BOOKS WHERE ID=$id"; 
     $dbase->query($sql_query);
-    $sql_query="DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE ID='$id'";
+    $sql_query="DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id";
     $dbase->query($sql_query);
-    $sql_query="DELETE FROM BOOKS_LINKS WHERE ID='$id'"; 
+    $sql_query="DELETE FROM BOOKS_LINKS WHERE BOOK_ID=$id"; 
     $dbase->query($sql_query);
     $dbase->close();
     header('Location: home.php');
@@ -239,7 +239,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     
     $res=$dbase->query("UPDATE BOOKS SET TITLE='$title',DESCR='$descr',AUTHORS='$author',YEAR='$year' WHERE ID=$id");
     
-    $sql_query="DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE ID='$id'";
+    $sql_query="DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id";
     
     $res=$dbase->query('SELECT ID FROM IT_SUBJECT');
     while($res->next(true))
