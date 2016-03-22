@@ -137,3 +137,14 @@ span.book_descr
 {
     font-style: italic;  
 }
+ul.book_tags
+{
+    border: 2px solid white;
+    border-radius: 15px;
+    border-top: 15px;
+}
+table.book_list
+{
+    display: inline;
+    margin : 20px 20px 20px 20px;
+}

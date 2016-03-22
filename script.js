@@ -185,9 +185,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 uploader.start();        
                 submit_btn.disabled = true;
             }
-            else
+            else if(file_input)
             {
                 alert('uploader is not defined');
+            }
+            else
+            {
+                upload_form.submit();
             }
         }
         

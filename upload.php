@@ -20,6 +20,15 @@ function img_dir($subpath=null)
     return $img_dir . '/' . $subpath;
 }
 
+if(!is_dir(temp_dir()))
+{
+    mkdir(temp_dir());
+}
+if(!is_dir(img_dir()))
+{
+    mkdir(img_dir());
+}
+
 function pdfGetImage($pdf_name)
 {
     $pdf_ext=".pdf";
@@ -115,14 +124,7 @@ function pdfGetImage($pdf_name)
     return $img_name;
 }
 
-if(!is_dir(temp_dir()))
-{
-    mkdir(temp_dir());
-}
-if(!is_dir(img_dir()))
-{
-    mkdir(img_dir());
-}
+
 if(isset($_FILES) && isset($_FILES['upfile']))
 {
 
@@ -168,7 +170,7 @@ if(isset($_FILES) && isset($_FILES['upfile']))
     }
 }
 
-if(isset($_POST['file_action']) && $_POST['file_action']==='file_insert')
+if(isset($_POST['action']) && $_POST['action']==='file_insert')
 {
     $dbase = odbc_connectDatabase();
     if($dbase!=null)
@@ -183,13 +185,27 @@ if(isset($_POST['file_action']) && $_POST['file_action']==='file_insert')
         }
         
         $res=$dbase->query("INSERT INTO BOOKS (TITLE,DESCR,AUTHORS,SIZE,YEAR,HASH,IMG_PATH) VALUES('$title','$descr','$author',$size,'$year','$hash','$img')");
-        $dbase->close();
         if(!$res)
         {
             echo 'Book not inserted in DB: ' . mysql_error() . '<BR>';
             exit();
         }
         $id = $res;
+        
+        $res=$dbase->query('SELECT ID FROM IT_SUBJECT');
+        while($res->next(true))
+        {
+            $subject=$res->field_value(0);
+            $code=sprintf('topic%d',$subject);
+            echo $code;
+            if(isset($_POST[$code]) && $_POST[$code]==='on')
+            {
+                $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($subject,$id)");
+            }
+        }
+        
+        $dbase->close();
+        
 	    //createDriveClient($_POST['store'],$_FILES['upfile']['name']);
         header('Location: home.php?bookid='.$id);
         
@@ -198,5 +214,45 @@ if(isset($_POST['file_action']) && $_POST['file_action']==='file_insert')
         # code...
         echo 'database is not connected<BR>';
     }
+}
+if(isset($_GET['action']) && $_GET['action']==='book_delete')
+{
+    $dbase = odbc_connectDatabase();
+    
+    $id=$_GET['bookid'];
+    $sql_query="DELETE FROM BOOKS WHERE ID='$id'"; 
+    $dbase->query($sql_query);
+    $sql_query="DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE ID='$id'";
+    $dbase->query($sql_query);
+    $sql_query="DELETE FROM BOOKS_LINKS WHERE ID='$id'"; 
+    $dbase->query($sql_query);
+    $dbase->close();
+    header('Location: home.php');
+}
+
+if(isset($_POST['action']) && $_POST['action']==='book_update')
+{
+    $dbase = odbc_connectDatabase();
+    
+    $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
+    $year=$_POST['year'];$id=$_POST['bookid'];
+    
+    $res=$dbase->query("UPDATE BOOKS SET TITLE='$title',DESCR='$descr',AUTHORS='$author',YEAR='$year' WHERE ID=$id");
+    
+    $sql_query="DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE ID='$id'";
+    
+    $res=$dbase->query('SELECT ID FROM IT_SUBJECT');
+    while($res->next(true))
+    {
+        $subject=$res->field_value(0);
+        $code=sprintf('topic%d',$subject);
+        echo $code;
+        if(isset($_POST[$code]) && $_POST[$code]==='on')
+        {
+            $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($subject,$id)");
+        }
+    }
+    $dbase->close();
+    header('Location: home.php?bookid='.$id);
 }
 ?>

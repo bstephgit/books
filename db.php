@@ -63,9 +63,16 @@ class Record
         $this->current_row = NULL;
     }
     
-    public function next()
+    public function next($row=false)
     {
-        $this->current_row=mysqli_fetch_assoc($this->response);
+        if(!$row)
+        {
+           $this->current_row=mysqli_fetch_assoc($this->response);
+        }
+        else 
+        {
+           $this->current_row=mysqli_fetch_row($this->response);
+        }
         return $this->current_row;
     }
     public function is_valid()
