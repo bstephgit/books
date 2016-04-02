@@ -198,7 +198,7 @@ if(isset($_POST['action']) && $_POST['action']==='file_insert')
             $subject=$res->field_value(0);
             $code=sprintf('topic%d',$subject);
             echo $code;
-            if(isset($_POST[$code]) && $_POST[$code]==='on')
+            if(isset($_POST[$code]) && $_POST['file_name'])
             {
                 $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($subject,$id)");
             }
@@ -206,8 +206,8 @@ if(isset($_POST['action']) && $_POST['action']==='file_insert')
         
         $dbase->close();
         
-	    //createDriveClient($_POST['store'],$_FILES['upfile']['name']);
-        header('Location: home.php?bookid='.$id);
+	    createDriveClient($_POST['store'],$_POST['file_name']);
+        //header('Location: home.php?bookid='.$id);
         
     }
     else {

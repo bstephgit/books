@@ -84,7 +84,7 @@ ChunkedUploader.prototype = {
     _onUploadComplete: function() {
         var upload_form = document.getElementById('form_upload');
         upload_form.submit();
-        alert('Upload complete');
+        //alert('Upload complete');
         var submit_btn = document.getElementById('submit_btn');
         submit_btn.disabled = false;
     },

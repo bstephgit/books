@@ -12,4 +12,10 @@
         <user>albertdupre</user>
         <password>Motdepasse21!</password>
     </host>
+    <host name="albertdupre.byethost13.com">
+        <server>sql202.byethost13.com</server>
+        <base>b13_17778490_1</base>
+        <user>b13_17778490</user>
+        <password>Motdepasse21!</password>
+    </host>
 </odbc>

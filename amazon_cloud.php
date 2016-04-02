@@ -4,11 +4,12 @@ include "drive_client.php";
 
 define('AMAZON_','AMZN');
 
+
 class AmazonCloudHelper extends DriveClient
 {
 	const CLIENT_ID="amzn1.application-oa2-client.4e00bfdaef2d4892846825fe546bf80d";
 	const CLIENT_SECRET="852a445d0e389160932648d79b534ebe0eb3c6268bd4f0e5c823a4a9c3ed8733";
-	const REDIRECT_URI='http://albertdupre.esy.es/books/amazon_cloud.php';
+	const REDIRECT_URI='https://albertdupre.byethost13.com/books/amazon_cloud.php';
 
 	const AUTH_URL = "https://www.amazon.com/ap/oa";
 	const TOKEN_URL = "https://api.amazon.com/auth/o2/token";
@@ -23,22 +24,70 @@ class AmazonCloudHelper extends DriveClient
     {
         return AMAZON_;
     }
+    
+    private function retrieve_parameters($response)
+    {
+        if(property_exists($response,'access_token'))
+        {
+            $_SESSION[AMAZON_]['access_token']=$response->access_token;
+        }
+        else 
+        {
+            throw new \Exception('access_token not found');
+        }
+        
+        if(property_exists($response,'refresh_token'))
+        {
+            $_SESSION[AMAZON_]['refresh_token']=$response->refresh_token;                
+        }
+        else 
+        {
+            throw new \Exception('refresh_token not found');
+        }
+        if(property_exists($response,'expires_in'))
+        {
+            $_SESSION[AMAZON_]['expires_in']=time() + intval($response->expires_in);
+        }
+    }
 	public function login()
 	{
         if(isset($_SESSION[AMAZON_]['access_token']))
         {
+            if(isset($_SESSION[AMAZON_]['expires_in']) && $_SESSION[AMAZON_]['expires_in']<=time())
+            {
+                $refresh_token=$_SESSION[AMAZON_]['refresh_token'];
+                if($refresh_token==null)
+                {
+                    throw new \Exception('cannot find refresh token');
+                }
+                $body= 'grant_type=refresh_token' . '&' .
+				'refresh_token=' . $refresh_token . '&' .
+				'client_id=' . self::CLIENT_ID . '&' .
+				'client_secret=' . self::CLIENT_SECRET ;
+
+                $options=array(
+                    CURLOPT_POST       => true,
+
+                    CURLOPT_HTTPHEADER => array(
+                        'Content-Type: application/x-www-form-urlencoded'
+                    ),
+
+                    CURLOPT_POSTFIELDS => $body
+                );
+                $response=$this->curl_request(self::TOKEN_URL,$options);
+                $response=json_decode($response);
+                $this->retrieve_parameters($response);
+            }
             return;
         }
 		if(isset($_GET['code']))
 		{
 			$code=$_GET['code'];
-			$body=array(
-				'grant_type' => 'authorization_code' ,
-				'code' => $code ,
-				'client_id' => urlencode(self::CLIENT_ID) ,
-				'client_secret' => urlencode(self::CLIENT_SECRET) ,
-				'redirect_uri' => urlencode(self::REDIRECT_URI)
-				);
+			$body= 'grant_type=authorization_code' . '&' .
+				'code=' . $code . '&' .
+				'client_id=' . self::CLIENT_ID . '&' .
+				'client_secret=' . self::CLIENT_SECRET . '&' .
+				'redirect_uri=' . self::REDIRECT_URI;
 
 			$options=array(
 				CURLOPT_POST       => true,
@@ -51,48 +100,40 @@ class AmazonCloudHelper extends DriveClient
         	);
             $response=$this->curl_request(self::TOKEN_URL,$options);
 			$response=json_decode($response);
-            
-            if(array_key_exists('access_token',$response))
-            {
-                $_SESSION[AMAZON_]['access_token']=$response['access_token'];
-            }
-            if(array_key_exists('refresh_token',$response))
-            {
-                $_SESSION[AMAZON_]['refresh_token']=$response['refresh_token'];                
-            }
-            $this->getEndPoint();
+            $this->retrieve_parameters($response);
 		}
 		else
 		{
 			$url = self::AUTH_URL
 				. '?client_id=' . self::CLIENT_ID
-				. '&scope=clouddrive%3Aread_all%20clouddrive%3Awrite'
+				. '&scope=' . urlencode('clouddrive:read_document clouddrive:write')
 				. '&response_type=code'
-				. '&redirect_uri=http://localhost';
+				. '&redirect_uri=' ;
 
-			header('Location: '. $url);
+			header('Location: '. $url . self::REDIRECT_URI);
 		}
-
-        return $url;
 	}
 	public function uploadFile()
 	{
-       $content_url=$_SESSIONS[AMAZON_]['contentUrl'];
+       $this->getEndPoint();
+       $content_url=$_SESSION[AMAZON_]['contentUrl'];
        if($content_url!=null)
        {
            $book_dir=$this->getBookDir();
            
            $the_file= new CURLFile('temp/'.$this->getFileName());
            
+           $metadata=json_encode(array( 'name' => $this->getFileName(), 'kind' => 'FILE', 'parents' => array($book_dir->id)));
            $body=array(
-               'metadata' => array( 'name' => $this->getFileName(), 'kind' => 'FILE', 'parents' => array($book_dir['id'])),
+               'metadata' => $metadata,
                'content' => $the_file
            );
            $options=array(
 				CURLOPT_POST       => true,
 
 				CURLOPT_HTTPHEADER => array(
-					'Authorization: Bearer ' . $this->getSessionVar('access_token')
+					'Authorization: Bearer ' . $this->getSessionVar('access_token'),
+					'Content-Type: multipart/form-data'
             	),
 
             	CURLOPT_POSTFIELDS => $body
@@ -100,7 +141,6 @@ class AmazonCloudHelper extends DriveClient
             $url=$this->getSessionVar('contentUrl') . '/nodes';
             $response=$this->curl_request($url,$options);
 			$response=json_decode($response);
-            
        }
        else
        {
@@ -129,8 +169,10 @@ class AmazonCloudHelper extends DriveClient
         if (false === $result) {
             throw new \Exception('curl_exec() failed: ' . curl_error($curl));
         }
+        
         return $result;
 	}
+    
     private function getEndPoint()
     {
         if(isset($_SESSION[AMAZON_]['contentUrl']))
@@ -142,24 +184,34 @@ class AmazonCloudHelper extends DriveClient
         $options = array(
             CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $_SESSION[AMAZON_]['access_token'])
         );
-        $response=json_decode( $this->curl_request($url,$options) );
         
-        if(array_key_exists('customerExists',$response))
+        $response=$this->curl_request($url,$options);
+        $response=json_decode( $response );
+ 
+        if(property_exists($response,'customerExists'))
         {
-            if($response['customerExists']===false)
+            if($response->customerExists===false)
             {
                 throw new \Exception('getEndPoint failed: customer does not exist');
             }
         }
-        if(array_key_exists('contentUrl',$response))
+        if(property_exists($response,'contentUrl'))
         {
-            $_SESSION[AMAZON_]['contentUrl']=$response['contentUrl'];
+            $_SESSION[AMAZON_]['contentUrl']=$response->contentUrl;
         }
-        if(array_key_exists('metadataUrl',$response))
+        else 
         {
-            $_SESSION[AMAZON_]['metadataUrl']=$response['metadataUrl'];
+            throw new \Exception('contentUrl not found');
         }
-    } 
+        if(property_exists($response,'metadataUrl'))
+        {
+            $_SESSION[AMAZON_]['metadataUrl']=$response->metadataUrl;
+        }
+        else 
+        {
+            throw new \Exception('metadataUrl not found');
+        }
+    }
     
     private function getBookDir()
     {
@@ -167,6 +219,7 @@ class AmazonCloudHelper extends DriveClient
         if($books_folder==null)
         {
             $books_folder=$this->createFolder('Books');
+            var_dump($books_folder);
         }
         return $books_folder;
     }
@@ -180,19 +233,27 @@ class AmazonCloudHelper extends DriveClient
         );
         $response=$this->curl_request($url,$options);
         $response=json_decode($response);
-        if(count($response)==0)
+
+        if($reponse!=null && $response->data!=null)
         {
-            return null;
+            foreach($response->$data as $node)
+            {
+                if($node->name===$name)
+                {
+                    return $node;
+                }
+            }
         }
-        return $response[0];
+        return null;
     }
+    
     private function createFolder($name)
     {
         $url = $this->getSessionVar('metadataUrl') . '/nodes';
-        $data=array("name"=>"Books", "kind"=>"FOLDER","labels"=>array("BookStore"));
+        $data=(object)array("name"=>"Books", "kind"=>"FOLDER","labels"=>array("BookStore"));
         $options= array(
             CURLOPT_POST       => true,
-            CURLOPT_POSTFIELDS => $data,
+            CURLOPT_POSTFIELDS => json_encode($data),
             CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->getSessionVar('access_token') )
            
         );
@@ -201,11 +262,12 @@ class AmazonCloudHelper extends DriveClient
         return $response;
     }
     
+    
 }
 
 session_start();
 
-if(!isset($_SESSION[AMAZON_]))
+if(!isset($_SESSION[AMAZON_]) || !is_array($_SESSION[AMAZON_]))
 {
 	$_SESSION[AMAZON_]=array( 
         'code' => null , 
@@ -214,17 +276,20 @@ if(!isset($_SESSION[AMAZON_]))
         'current_file' => null,
         'contentUrl' => null,
         'metadataUrl' => null,
-        'current_file' => null );
+        'current_file' => null,
+        'expires_in' => 0 );
 }
+
 try
 {
     $amzn_drive=new AmazonCloudHelper();
     $amzn_drive->login();
     $amzn_drive->uploadFile();
-    header('Location: home.php?done=1');
+    header('Location: home.php');
 }
 catch(Exception $e)
 {
     echo $e->getMessage();
 }
+
 ?>
