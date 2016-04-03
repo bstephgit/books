@@ -141,36 +141,12 @@ class AmazonCloudHelper extends DriveClient
             $url=$this->getSessionVar('contentUrl') . '/nodes';
             $response=$this->curl_request($url,$options);
 			$response=json_decode($response);
+            var_dump($response);
        }
        else
        {
            throw new \Exception('cannot get conntent url for Amazon cloud');
        }
-	}
-
-	private function curl_request($url, $options = array())
-	{
-		$curl = curl_init();
-
-        $defaultOptions=array(
-            // General options.
-            CURLOPT_RETURNTRANSFER => true,
-            //CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_AUTOREFERER    => true,
-
-            // SSL options.
-            CURLOPT_SSL_VERIFYHOST => false,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_URL            => $url
-        );
-
-		curl_setopt_array($curl,$defaultOptions + $options);
-        $result = curl_exec($curl);
-        if (false === $result) {
-            throw new \Exception('curl_exec() failed: ' . curl_error($curl));
-        }
-        
-        return $result;
 	}
     
     private function getEndPoint()
@@ -219,24 +195,22 @@ class AmazonCloudHelper extends DriveClient
         if($books_folder==null)
         {
             $books_folder=$this->createFolder('Books');
-            var_dump($books_folder);
         }
         return $books_folder;
     }
     
     private function getFolder($name)
     {
-        $url = $this->getSessionVar('metadataUrl') . '/nodes?filters=kind:FOLDER AND name:' . $name;
+        $url = $this->getSessionVar('metadataUrl') . '/nodes?filters=' . urlencode('kind:FOLDER AND name:' . $name);
         $options = array(
             CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->getSessionVar('access_token') )
             
         );
         $response=$this->curl_request($url,$options);
         $response=json_decode($response);
-
-        if($reponse!=null && $response->data!=null)
+        if($response!=null && $response->data!=null)
         {
-            foreach($response->$data as $node)
+            foreach($response->data as $node)
             {
                 if($node->name===$name)
                 {

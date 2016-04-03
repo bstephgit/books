@@ -212,7 +212,7 @@ if(!isset($_SESSION[GOOGLE_]))
 try{
     $gg_upload_helper = new GoogleDriveHelper();
     $gg_upload_helper->login();
-    $gg_upload_helper->uploadFile();
+    $upfile=$gg_upload_helper->uploadFile();
     header('Location: home.php?done=1');
 }
 catch(Exception $e)

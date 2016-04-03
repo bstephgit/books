@@ -32,6 +32,31 @@ class DriveClient
         }
         return null; 
     }
+    
+    protected function curl_request($url, $options = array())
+	{
+		$curl = curl_init();
+
+        $defaultOptions=array(
+            // General options.
+            CURLOPT_RETURNTRANSFER => true,
+            //CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_AUTOREFERER    => true,
+
+            // SSL options.
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_URL            => $url
+        );
+
+		curl_setopt_array($curl,$defaultOptions + $options);
+        $result = curl_exec($curl);
+        if (false === $result) {
+            throw new \Exception('curl_exec() failed: ' . curl_error($curl));
+        }
+        
+        return $result;
+	}
 }
 
 function createDriveClient($drive_code,$filename)
