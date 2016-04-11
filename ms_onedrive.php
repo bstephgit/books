@@ -78,8 +78,8 @@ class MSOneDriveHelper extends DriveClient
 
 if(!isset($_SESSION[MS_ONEDRIVE_]))
 {
-    $_SESSION[MS_ONEDRIVE_]=array(
-        
+    $_SESSION[MS_ONEDRIVE_]=array(
+        'onedrive.client.state' => null
     );
 }
 
@@ -88,7 +88,6 @@ try
     $store=new MSOneDriveHelper();
     $store->login();
     $store->uploadFile();
-    header('Location: home.php?done=1');
 }
 catch(Exception $e)
 {

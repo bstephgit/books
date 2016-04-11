@@ -1,5 +1,4 @@
 <?php
-include "db.php";
 include "drive_client.php";
 
 loadOdbc();
@@ -34,11 +33,11 @@ function pdfGetImage($pdf_name)
     $pdf_ext=".pdf";
     $pos=strpos($pdf_name,$pdf_ext);
     $img_name='';
-    
+
     if( $pos!=false && ($pos+strlen($pdf_ext))==strlen($pdf_name) )
     {
         $img_basename = basename($pdf_name,$pdf_ext);
-        
+
         if(!is_dir(img_dir($img_basename)))
         {
             mkdir(img_dir($img_basename));
@@ -142,15 +141,20 @@ if(isset($_FILES) && isset($_FILES['upfile']))
 
     $headers = getallheaders();
     $resultat=false;
-    if(isset($headers['Content-Range']))
+    if(isset($headers['content-range']) || isset($headers['Content-Range']))
     {
         $range_start=0;
         $range_end=0;
         $file_size=0;
         $filename = $_FILES['upfile']['name'];
         $filepath=temp_dir($filename);
-        
-        sscanf($headers['Content-Range'],'bytes %d-%d/%d',$range_start,$range_end,$file_size);
+
+        $hr='content-range';
+        if(!isset($headers[$hr])) 
+        {
+            $hr='Content-Range';
+        }
+        sscanf($headers[$hr],'bytes %d-%d/%d',$range_start,$range_end,$file_size);
         if($range_start==0 && is_file($filepath))
         {
             unlink($filepath);
@@ -160,11 +164,17 @@ if(isset($_FILES) && isset($_FILES['upfile']))
         {
             fwrite($hfile,file_get_contents($_FILES['upfile']['tmp_name']));
             fclose($hfile);
+            http_response_code(200);
+            exit();
+        }
+        else
+        {
+            header('HTTP/ 500 ' . error_get_last());
         }
     }
     else 
     {
-        $resultat = move_uploaded_file($_FILES['upfile']['tmp_name'],$temp_dir.'/'.$_FILES['upfile']['name']);
+        $resultat = move_uploaded_file($_FILES['upfile']['tmp_name'],temp_dir($_FILES['upfile']['name']));
         $img=pdfGetImage($_FILES['upfile']['name']);
         
     }
@@ -197,7 +207,6 @@ if(isset($_POST['action']) && $_POST['action']==='file_insert')
         {
             $subject=$res->field_value(0);
             $code=sprintf('topic%d',$subject);
-            echo $code;
             if(isset($_POST[$code]) && $_POST['file_name'])
             {
                 $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($subject,$id)");
@@ -206,9 +215,9 @@ if(isset($_POST['action']) && $_POST['action']==='file_insert')
         
         $dbase->close();
         
-	    createDriveClient($_POST['store'],$_POST['file_name']);
-        //header('Location: home.php?bookid='.$id);
-        
+	    createDriveClient($_POST['store'],$_POST['file_name'],$id);
+
+
     }
     else {
         # code...

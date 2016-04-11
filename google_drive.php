@@ -96,14 +96,20 @@ define('GOOGLE_','GOOG');
 		//$this->drive_file->setDescription('uploaded from server');
 		//$this->drive_file->setSize(filesize('temp/'.$file_name));
 		$size_mo = $this->drive_file->getSize() / (1024*1024);
+        $res=null;
 		if($size_mo>5)
 		{
-			return $this->uploadMultipart();
+			$res=$this->uploadMultipart();
 		}
 		else
 		{
-			return $this->uploadSimple();
+			$res=$this->uploadSimple();
 		}
+        $obj=$this->google_drive_service->files->get($res->id,array('fields'=>'webContentLink,size'));
+        if($obj->webContentLink)
+        {
+            $this->register_link($obj->webContentLink,$obj->size);
+        }
     }
 
     private function uploadSimple()
@@ -212,8 +218,7 @@ if(!isset($_SESSION[GOOGLE_]))
 try{
     $gg_upload_helper = new GoogleDriveHelper();
     $gg_upload_helper->login();
-    $upfile=$gg_upload_helper->uploadFile();
-    header('Location: home.php?done=1');
+    $gg_upload_helper->uploadFile();
 }
 catch(Exception $e)
 {

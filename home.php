@@ -55,7 +55,7 @@ function print_subjects_tab($base)
     }
 }
 
-function print_book($rec,$subjects)
+function print_book($rec,$subjects,$links)
 {
     if($rec && $rec->next())
     {
@@ -76,6 +76,13 @@ function print_book($rec,$subjects)
         printf("<div class='book'>Parution: <span>%s</span></div>",$year);
         printf("<div class='book'>File size: <span>%s</span></div>",sizeUnit($size));
         printf("<div class='book'><span class='book_descr'>%s</span></div>",$descr);
+        if($links && $links->next())
+        {
+           $url=$links->field_value('URL');
+           $size=$links->field_value('FILE_SIZE');
+           $vendor=$links->field_value('VENDOR');
+           echo sprintf("<div class='book'><a class='nav_element' href='%s'>Download</a> -- %s (%s)</div>",$url,$size,$vendor);
+        }
         echo '</td>';
         echo '<td><div class="book"><ul class="book_tags"><LH>Tags</LH>';
         while($subjects->next())
@@ -248,7 +255,8 @@ function print_book($rec,$subjects)
                             $query_str="SELECT TITLE,YEAR,DESCR,AUTHORS,SIZE,IMG_PATH FROM BOOKS WHERE ID=$id";
                             $rec=$dbase->query($query_str);
                             $subjects=$dbase->query('SELECT NAME FROM IT_SUBJECT WHERE ID IN (SELECT SUBJECT_ID FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID='.$id.')');
-                            print_book($rec,$subjects);
+                            $links=$dbase->query('SELECT lnks.URL,lnks.FILE_SIZE,fs.VENDOR FROM BOOKS_LINKS AS lnks, FILE_STORE AS fs WHERE lnks.BOOK_ID=' . $id . ' AND fs.ID=lnks.STORE_ID');
+                            print_book($rec,$subjects,$links);
                             $dbase->close();
                         }
 
@@ -265,7 +273,7 @@ function print_book($rec,$subjects)
                        echo '<div class="nav_elements">';
                        while($rec->next())
                        {
-                            printf('<table class="book_list"><tr><td><img src="%s" class="book"></td></tr><tr><td><a href="home.php?bookid=%s">%s</a></td></tr></table>',
+                           printf('<table class="book_list"><tr><td><img src="%s" class="book"></td></tr><tr><td><a class="nav_element" href="home.php?bookid=%s">%s</a></td></tr></table>',
                             $rec->field_value('IMG_PATH'),$rec->field_value('ID'),$rec->field_value('TITLE'));
                        }
                        echo '</div>';
