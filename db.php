@@ -1,5 +1,7 @@
 <?php
 
+namespace Database;
+
 class DB
 {
     private $connexion;
@@ -40,7 +42,11 @@ class DB
             {
                 if(is_bool($response))
                 {
-                    return mysqli_insert_id($this->connexion);
+                    if($response===true)
+                    {
+                        return mysqli_insert_id($this->connexion);
+                    }
+                    return $response;
                 }
                 return new Record($response);
             }
@@ -100,7 +106,7 @@ class ODBC
     public function load($file_path)
     {
         try{
-            $xml = new XMLReader();
+            $xml = new \XMLReader();
             if($xml->open($file_path)===false)
             {
                 throw new Exception('Error opening odbc xml file: '.$file_path);
@@ -110,27 +116,27 @@ class ODBC
             $element_name='';
             while($xml->read())
             {
-                if($xml->nodeType==XMLReader::ELEMENT)
+                if($xml->nodeType==\XMLReader::ELEMENT)
                 {
                     $element_name=$xml->name;
-                    if($element_name=='host')
+                    if($element_name==='host')
                     {
                         $hname=$xml->getAttribute('name');
                         if($hname!=null)
                         {
-                            $matching_host=($this_host==$hname);
+                            $matching_host=($this_host===$hname);
                         }
                     }
                 }
-                if($xml->nodeType == XMLReader::END_ELEMENT)
+                if($xml->nodeType == \XMLReader::END_ELEMENT)
                 {
-                    if($element_name=='host')
+                    if($element_name==='host')
                     {
                         $matching_host=false;
                     }
                     $element_name='';
                 }
-                if($matching_host && $xml->nodeType==XMLReader::TEXT)
+                if($matching_host && $xml->nodeType==\XMLReader::TEXT)
                 {
                     if(array_key_exists($element_name,$this->_config))
                     {
@@ -141,7 +147,7 @@ class ODBC
             $xml->close();
             return $this->has_valid_configuration();
         }
-        catch(Exception $e)
+        catch(\Exception $e)
         {
             return false;
         }
@@ -177,7 +183,6 @@ class ODBC
 
 function loadOdbc()
 {
-    unset ($_SESSION['ODBC']);
     if(!isset($_SESSION['ODBC']))
     {
         $odbc=new ODBC();
@@ -185,18 +190,36 @@ function loadOdbc()
         {
             $_SESSION['ODBC']=$odbc;
         }
+        else
+        {
+            throw new \Exception('load odbc xml failed');
+        }
     }
 }
 
-function odbc_connectDatabase()
+function odbc()
 {
-    $base=null;
-    if(isset($_SESSION['ODBC']))
+    loadOdbc();
+    return $_SESSION['ODBC'];
+}
+
+function storeTransaction($obj)
+{
+    $_SESSION['DB_TRANSACT'] = $obj;
+}
+
+function getTransaction()
+{
+    if(isset($_SESSION['DB_TRANSACT']))
     {
-        $odbc=$_SESSION['ODBC'];
-        $base = $odbc->connect();
+        return $_SESSION['DB_TRANSACT'];
     }
-    return $base;
+    return null;
+}
+
+function removeTransaction()
+{
+    unset($_SESSION['DB_TRANSACT']);
 }
 
 ?>

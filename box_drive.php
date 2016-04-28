@@ -1,11 +1,11 @@
 <?php
 
-include "drive_client.php";
+include_once "drive_client.php";
 
 define('BOX_COM_','BOX');
 define('__REDIRECT_URI__','https://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF']);
 
-class BoxDrive extends DriveClient
+class BoxDrive extends Drive\Client
 {
     const CLIENT_ID="2en9g8pt7jgu5kgvyss7qbrxgk783212";
 	const CLIENT_SECRET="t0nY1UF8AkmKZZp7qPEHWU8i2OG2pZwD";
@@ -24,87 +24,113 @@ class BoxDrive extends DriveClient
     {
         return BOX_COM_;
     }
-    
-    public function login() 
-    {
-        if($this->getSessionVar('access_token'))
-        {
-            $expire_time=$this->getSessionVar('expires_in');
-            if($expire_time < time())
-            {
-                if($this->getSessionVar('refresh_token'))
-                {
-                    $body = 'grant_type=refresh_token' . '&' . 
-                        'refresh_token=' . urlencode($this->getSessionVar('refresh_token')) . '&' .
-                        'client_id=' . urlencode(self::CLIENT_ID) . '&' .
-                        'client_secret=' . urlencode(self::CLIENT_SECRET);
-                        $options=array(
-                            CURLOPT_POST       => true,
-                            CURLOPT_POSTFIELDS => $body
-                        );
-                        $response=$this->curl_request(self::TOKEN_URL,$options);
-                        $response=json_decode($response);
-                        var_dump($response);
-                        if($response->error)
-                        {
-                            throw new Exception($response->error);
-                        }
-                        $this->retrieve_parameters($response);
-                }
-                else
-                {
-                    throw new Exception('Refresh token not found');
-                }
-            }
-        }
-        else if(isset($_GET['code']))
-        {
-            $body='grant_type=authorization_code' . '&' .
-                  'code=' . $_GET['code'] . '&' .
-                  'client_id=' . self::CLIENT_ID . '&' .
-                  'client_secret=' . self::CLIENT_SECRET . '&' .
-                  'redirect_uri=' . self::REDIRECT_URI;
-             $options=array(
-                    CURLOPT_POST       => true,
-                    CURLOPT_POSTFIELDS => $body
-                );
-            $response=$this->curl_request(self::TOKEN_URL,$options);
-            $response=json_decode($response);
-			if($response->error)
-			{
-				throw new Exception($response->error);
-			}
-            $this->retrieve_parameters($response);
-        }
-        else if(isset($_GET['error']))
-        {
-            $err_msg=$_GET['error'];
-            if(isset($_GET['error_description']))
-            {
-                $err_msg += ': ' . $_GET['error_description'];
-            }
-            throw new Exception($err_msg);
-        }
-        else
-        {
-            $url= self::AUTH_URL . '?response_type=code' . '&' .
+
+    protected function getRedirectUrl()
+    {
+        $url= self::AUTH_URL . '?response_type=code' . '&' .
             'client_id=' . self::CLIENT_ID . '&' .
             'redirect_uri=' . self::REDIRECT_URI . '&' .
             'state=' . urlencode($this->getFileName()) .  '&' .
-            'box_login=' . urlencode('tcn75323@gmail.com');
-            header('Location: ' . $url);
+            'box_login=' . urlencode('tcn75323@gmail.com');
+        return $url;
+    }
+    protected function isExpired()
+    {
+        $this->expires_in >= time();
+    }
+    protected function onCode($code)
+    {
+        $body='grant_type=authorization_code' . '&' .
+                  'code=' . $code . '&' .
+                  'client_id=' . self::CLIENT_ID . '&' .
+                  'client_secret=' . self::CLIENT_SECRET . '&' .
+                  'redirect_uri=' . self::REDIRECT_URI;
+
+        $response=json_decode($this->curl_post(self::TOKEN_URL,$body,$options));
+
+        if($response->error)
+        {
+            throw new Exception($response->error);
+        }
+
+        $this->retrieve_parameters($response);
+    }
+    protected function refreshToken()
+    {
+        if($this->refresh_token)
+        {
+            $body = 'grant_type=refresh_token' . '&' .
+                'refresh_token=' . urlencode($this->refresh_token) . '&' .
+                'client_id=' . urlencode(self::CLIENT_ID) . '&' .
+                'client_secret=' . urlencode(self::CLIENT_SECRET);
+
+            $response=json_decode($this->curl_post(self::TOKEN_URL,$body));
+            if($response->error)
+            {
+                throw new Exception($response->error);
+            }
+            $this->retrieve_parameters($response);
+        }
+        else
+        {
+            throw new Exception('Refresh token not found');
+        }
+    }
+
+    public function deleteFile()
+    {
+        if($this->isLogged())
+        {
+            $file_id=$this->getStoreFileId();
+            if($file_id)
+            {
+                $url=self::API_URL . '/files/' . $file_id;
+                $options=array(
+                    CURLOPT_CUSTOMREQUEST => 'DELETE',
+
+                    CURLOPT_HTTPHEADER => array(
+                        'Authorization: Bearer ' . $this->access_token
+                    )
+                );
+                $response=$this->curl_request($url,$options);
+            }
+        }
+    }
+    public function downloadFile()
+    {
+        if($this->isLogged())
+        {
+            $fileid=$this->getStoreFileId();
+            if($fileid)
+            {
+                $options=array(
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTPHEADER => array(
+                        'Authorization: Bearer ' . $this->access_token
+                    )
+                );
+                $url= self::API_URL . sprintf('/files/%s',$fileid);
+                $file_info = json_decode($this->curl_request($url,$options));
+
+                $url = self::API_URL . sprintf('/files/%s/content',$fileid);
+                $opt_output = array(
+                    CURLOPT_FILE => 'temp/' . $file_info->name
+                );
+                $this->curl_request($url, array_merge($options,$opt_output));
+            }
         }
     }
     public function uploadFile() 
-    {
-        if($this->getSessionVar('access_token'))
-        {
+    {
+        if($this->isLogged())
+        {
             $book_folder=$this->getBookFolder();
             if($book_folder->id)
             {
                 $url= 'https://upload.box.com/api/2.0/files/content';
                 
-                $attributes= array( "name" => $this->getFileName(), "parent" => array("id" => $book_folder->id));
+                $attributes= array( "name" => $this->getFileName(), "parent" => array("id" => $book_folder->id));
+
                 $the_file= new CURLFile(realpath('temp/'.$this->getFileName()));
                 
                 $body=array(
@@ -113,27 +139,25 @@ class BoxDrive extends DriveClient
                );
                 
                 $options=array(
-                     CURLOPT_POST       => true,
-
                      CURLOPT_HTTPHEADER => array(
-                         'Authorization: Bearer ' . $this->getSessionVar('access_token'),
+                         'Authorization: Bearer ' . $this->access_token,
                          'Content-Type: multipart/form-data'
-                     ),
-
-                     CURLOPT_POSTFIELDS => $body
+                     )
                  );
-                $response=$this->curl_request($url,$options);
-                if($response==null)
-                {
-                    throw new Exception('response is null');
-                }
+                $response=$this->curl_post($url,$body,$options);
+
+                if($response==null)
+                {
+                    throw new Exception('response is null');
+                }
+
                 $response=json_decode($response);
                 if($response->error)
                 {
                     throw new Exception($response->error);
                 }
-                $download_url = self::API_URL . '/files/' . $response->entries[0]->id . '/content';
-                $this->register_link($download_url, $response->entries[0]->size);
+                //$download_url = self::API_URL . '/files/' . $response->entries[0]->id . '/content';
+                $this->register_link($response->entries[0]->id, $response->entries[0]->size);
             }
             else{
                 throw new Exception("invalid 'Books' folder", 1);
@@ -145,7 +169,7 @@ class BoxDrive extends DriveClient
     {
         $url = self::API_URL . '/folders/0/items';
         $options = array(
-            CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->getSessionVar('access_token') )
+            CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->access_token )
             
         );
         $response=$this->curl_request($url,$options);
@@ -161,35 +185,16 @@ class BoxDrive extends DriveClient
         $body = json_encode( array( 'name' => 'Books', "parent" => array("id" => "0") ) );
         
         $options = array(
-            CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->getSessionVar('access_token') ),
-            CURLOPT_POST       => true,
-            CURLOPT_POSTFIELDS => $body
+            CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->access_token ),
         );
-        $response=$this->curl_request($url,$options);
+        $response=$this->curl_post($url,$body,$options);
         $response=json_decode($response);
         return $response;
     }
-}
-
-if(!isset($_SESSION[BOX_COM_]) || !is_array($_SESSION[BOX_COM_]))
-{
-    $_SESSION[BOX_COM_]= array(
-        'access_token' => null,
-        'refresh_token' => null,
-        'expires_in' => 0
-    );
 }
-try
-{
-    $box_helper= new BoxDrive();
-    $box_helper->login();
-    $box_helper->uploadFile();   
-}
-catch(Exception $e)
-{
-    unset($_SESSION[BOX_COM_]);
-    echo $e;
-    http_response_code(500);
-}
-
+
+$box_helper= new BoxDrive();
+$box_helper->execute();
+    
+
 ?>

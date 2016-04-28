@@ -2,7 +2,7 @@
 
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../onedrive-php-sdk/src/Krizalys/Onedrive/'));
 
-include "drive_client.php";
+include_once "drive_client.php";
 
 require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/Object.php');
 require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/Client.php');
@@ -16,14 +16,15 @@ define('REDIRECT_URL','http://' . $_SERVER['HTTP_HOST'] . '/books/ms_onedrive.ph
 define('CLIENT_SECRET','XZxVArudOBTAcEvWlO4zlE4bBXCkfm5P');
 define('MS_ONEDRIVE_','MSOD');
 
-class MSOneDriveHelper extends DriveClient
+class MSOneDriveHelper extends Drive\Client
 {
 	private $client;
 
 	public function __construct()
 	{
         parent::__construct();
-		if(isset($_SESSION[MS_ONEDRIVE_]['onedrive.client.state']))
+        $option=null;
+		if($this->getSessionVar('onedrive.client.state'))
 		{
 			$option = array('client_id' => CLIENT_ID,'state' => $this->getSessionVar('onedrive.client.state'));
 		}
@@ -39,59 +40,104 @@ class MSOneDriveHelper extends DriveClient
         return MS_ONEDRIVE_; 
     }
 
-	public function login()
-	{
-		if (!array_key_exists('code', $_GET))
-		{
-			$login_url = $this->client->getLogInUrl(array('wl.basic','wl.signin','wl.skydrive_update'),REDIRECT_URL);
+    protected function getRedirectUrl()
+    {
+        $login_url = $this->client->getLogInUrl(array('wl.basic','wl.signin','wl.skydrive_update'),REDIRECT_URL);
+        $this->setSessionVar('onedrive.client.state',$this->client->getState());
+        return $login_url;
+    }
+    protected function getTokenUrl()
+    {
+        throw new \Exception('Not implemented');
+    }
+    protected function isExpired()
+    {
+        $this->client->getAccessTokenStatus()==-2;
+    }
+    protected function onCode($code)
+    {
+        $this->client->obtainAccessToken(CLIENT_SECRET,$code);
+        $state=$this->client->getState();
+        
+        $this->retrieve_parameters( $state->token->data );
+    }
+    protected function refreshToken()
+    {
+        $options=array( CURLOPT_HTTPHEADER => array( 'Content-Type: application/x-www-form-urlencoded') );
+        $body = 'client_id=' . CLIENT_ID . ' &redirect_uri=' . REDIRECT_URL . '&client_secret=' . CLIENT_SECRET .
+                '&refresh_token=' . $this->refresh_token . '&grant_type=refresh_token';
+        $response = $this->curl_post('https://login.live.com/oauth20_authorize.srf',$body,$options);
 
-			$_SESSION[MS_ONEDRIVE_]['onedrive.client.state']=$this->client->getState();
-			//should be redirected after execution
-			header('Location: '.$login_url);
-		}
-		else
-		{
-			$this->client->obtainAccessToken(CLIENT_SECRET,$_GET['code']);
-		}
+        $state = array('redirect_uri' => null,
+                        'token'       => array( 'obtained' => time(), 'data' => json_decode($response) )
+            );
+        $option = array('client_id' => CLIENT_ID,'state' => $state );
+        $this->client = new \Krizalys\Onedrive\Client($option);
+        $this->retrieve_parameters( $state->token->data );
 
-	}
+    }
+
 	public function uploadFile()
 	{
-		$public_docs=$this->client->fetchDocs();
-		$books_folder=NULL;
-		foreach($public_docs->fetchChildObjects() as $abook)
-		{
-			//echo $abook->getName();
-			if($abook->isFolder() && $abook->getName()=='books')
-			{
-				$books_folder=$abook;
-				break;
-			}
-		}
-		if($books_folder==NULL)
-		{
-			$books_folder=$public_docs->createFolder('Books');
-		}
-		return $books_folder->createFile($this->getFileName(),file_get_contents('temp/'.$this->getFileName()));
+        if($this->isLogged())
+        {
+            $public_docs=$this->client->fetchDocs();
+            $books_folder=NULL;
+            foreach($public_docs->fetchChildObjects() as $abook)
+            {
+                //echo $abook->getName();
+                if($abook->isFolder() && $abook->getName()=='books')
+                {
+                    $books_folder=$abook;
+                    break;
+                }
+            }
+            if($books_folder==NULL)
+            {
+                $books_folder=$public_docs->createFolder('Books');
+            }
+            $res=$books_folder->createFile($this->getFileName(),file_get_contents('temp/'.$this->getFileName()));
+            if($res instanceof \Krizalys\Onedrive\File)
+            {
+                $this->register_link($res->getId(),$res->getSize());
+            }
+            else
+            {
+                throw new \Exception('Cannot upload file: ' . var_dump($res));
+            }
+        }
+        else
+        {
+            throw new \Exception('no token to file uploaded');
+        }
 	}
+    public function deleteFile()
+    {
+        if($this->isLogged())
+        {
+            $file_id=$this->getStoreFileId();
+            if($file_id)
+            {
+                $this->client->deleteObject($file_id);
+            }
+        }
+    }
+    public function downloadFile()
+    {
+        if($this->isLogged())
+        {
+            $file_id=$this->getStoreFileId();
+            if($file_id)
+            {
+                $file_obj = new \Krizalys\Onedrive\File($this->client,$file_id);
+                file_put_contents('temp/' . $obj->name,$file_obj->fetchContent());
+            }
+        }
+    }
 }
 
-if(!isset($_SESSION[MS_ONEDRIVE_]))
-{
-    $_SESSION[MS_ONEDRIVE_]=array(
-        'onedrive.client.state' => null
-    );
-}
 
-try
-{
-    $store=new MSOneDriveHelper();
-    $store->login();
-    $store->uploadFile();
-}
-catch(Exception $e)
-{
-    //header('Location: home.php?error='.$e->getMessage());
-    echo $e->getMessage();
-}
+$store=new MSOneDriveHelper();
+$store->execute();
+
 ?>

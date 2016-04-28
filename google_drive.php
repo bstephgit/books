@@ -3,7 +3,7 @@ set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-p
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-php-client/src/Google'));
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-php-client/src/Google/Service'));
 
-include "drive_client.php";
+include_once "drive_client.php";
 
 require_once realpath('../google-api-php-client/src').'/Google/Auth/OAuth2.php';
 require_once realpath('../google-api-php-client/src').'/Google/Client.php';
@@ -20,7 +20,7 @@ define('SERVICE_ACCOUNT_EMAIL', 'incinerator-book-store@velvety-tube-124123.iam.
 define('SERVICE_ACCOUNT_PKCS12_FILE_PATH', realpath('My Project-2c1987e4809b.json'));
 define('GOOGLE_','GOOG');
 
- class GoogleDriveHelper extends DriveClient
+ class GoogleDriveHelper extends Drive\Client
  {
     private $google_drive_service;
     private $drive_file;
@@ -45,26 +45,45 @@ define('GOOGLE_','GOOG');
 		$client = $this->google_drive_service->getClient();
 		if (isset($_REQUEST['logout']))
 		{
-			 $_SESSION[GOOGLE_]['upload_token']=null;
+            $this->unsetSessionVar('upload_token');
+            $this->unsetSessionVar('refresh_token');
 		}
 
 		if (isset($_GET['code'])) {
-			$client->authenticate($_GET['code']);
-			$_SESSION[GOOGLE_]['upload_token'] = $client->getAccessToken();
+			$token= $client->authenticate($_GET['code']);
+            $this->setSessionVar('upload_token',$token);
 			$redirect = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
-			header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
+            header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
 		}
 
-		if (isset($_SESSION[GOOGLE_]['upload_token'])) {
-			$client->setAccessToken($_SESSION[GOOGLE_]['upload_token']);
-			if ($client->isAccessTokenExpired()) {
-			    $_SESSION[GOOGLE_]['upload_token']=null;
-			}
+		if ($this->getSessionVar('upload_token')) {
+            if($client->getAccessToken()==null)
+            {
+                $client->setAccessToken($this->getSessionVar('upload_token'));
+            }
+            if ($client->isAccessTokenExpired()) 
+            {
+                $this->unsetSessionVar('upload_token');
+                $refresh_token=$client->getRefreshToken();
+                if($refresh_token)
+                {
+                    $client->refreshToken($refresh_token);
+                    $this->setSessionVar('upload_token',$client->getAccessToken());
+                }
+                else
+                {
+                    throw new \Exception('Cannot refresh auth (token null)');
+                }
+            }
+            else
+            {
+                $client->setAccessToken($this->getSessionVar('upload_token'));
+            }
 		}
         else 
         {
-			$authUrl = $client->createAuthUrl();
-			header('Location: ' . filter_var($authUrl, FILTER_SANITIZE_URL));
+            $authUrl = $client->createAuthUrl();
+            header('Location: ' . filter_var($authUrl, FILTER_SANITIZE_URL));
 		}
 	}
     private function buildService($userEmail)
@@ -76,39 +95,79 @@ define('GOOGLE_','GOOG');
         $this->google_drive_service = new Google_Service_Drive($client);
     }
 
-	 private function buildAuth()
-	 {
-		 $client_id = '76824108658-qopibc57hedf4k4he7rlateis2bkoigv.apps.googleusercontent.com';
-		 $client_secret = '444KL-z0e_JZR8_PBu_vXvKH';
-		 $redirect_uri = 'http://' .  $_SERVER['HTTP_HOST'] . '/books/google_drive.php?callbackAuth';
+    private function buildAuth()
+    {
+        $client_id = '76824108658-qopibc57hedf4k4he7rlateis2bkoigv.apps.googleusercontent.com';
+        $client_secret = '444KL-z0e_JZR8_PBu_vXvKH';
+        $redirect_uri = 'http://' .  $_SERVER['HTTP_HOST'] . '/books/google_drive.php?callbackAuth';
 
-		 $client = new Google_Client();
-		 $client->setClientId($client_id);
-		 $client->setClientSecret($client_secret);
-		 $client->setRedirectUri($redirect_uri);
-		 $client->addScope("https://www.googleapis.com/auth/drive");
-		 $this->google_drive_service = new Google_Service_Drive($client);
-	 }
+        $client = new Google_Client();
+        $client->setClientId($client_id);
+        $client->setClientSecret($client_secret);
+        $client->setRedirectUri($redirect_uri);
+        $client->addScope("https://www.googleapis.com/auth/drive");
+        $this->google_drive_service = new Google_Service_Drive($client);
+	}
+    public function deleteFile()
+    {
+        if($this->getSessionVar('upload_token'))
+        {
+            $file_id=$this->getStoreFileId();
+            if($file_id)
+            {
+                $this->google_drive_service->files->delete($file_id);
+            }
+            else
+            {
+                throw new \Exception('cannot delete file: file id not found');
+            }
+        }
+        else
+        {
+            throw new \Exception('Cannot delete file: acces token not found');
+        }
+    }
+    public function downloadFile()
+    {
+        if($this->getSessionVar('upload_token'))
+        {
+            $file_id=$this->getStoreFileId();
+            if($file_id)
+            {
+                $obj=$this->google_drive_service->files->get($file_id,array('fields'=>'name'));
+                $content=$this->google_drive_service->files->get($res->id,array('alt'=>'media'));
+                file_put_contents('temp/' . $obj->name,$content);
+            }
+        }
+    }
     public function uploadFile()
     {
-		$file_name = $this->drive_file->getName();
-		$this->drive_file->setParents( array($this->getDestFolder("Books")->getId()) );
-		//$this->drive_file->setDescription('uploaded from server');
-		//$this->drive_file->setSize(filesize('temp/'.$file_name));
-		$size_mo = $this->drive_file->getSize() / (1024*1024);
-        $res=null;
-		if($size_mo>5)
-		{
-			$res=$this->uploadMultipart();
-		}
-		else
-		{
-			$res=$this->uploadSimple();
-		}
-        $obj=$this->google_drive_service->files->get($res->id,array('fields'=>'webContentLink,size'));
-        if($obj->webContentLink)
+        if($this->getSessionVar('upload_token'))
         {
-            $this->register_link($obj->webContentLink,$obj->size);
+		    $file_name = $this->drive_file->getName();
+		    $this->drive_file->setParents( array($this->getDestFolder("Books")->getId()) );
+		    //$this->drive_file->setDescription('uploaded from server');
+		    //$this->drive_file->setSize(filesize('temp/'.$file_name));
+		    $size_mo = $this->drive_file->getSize() / (1024*1024);
+            $res=null;
+		    if($size_mo>5)
+		    {
+			    $res=$this->uploadMultipart();
+		    }
+		    else
+		    {
+			    $res=$this->uploadSimple();
+		    }
+            if($res->error)
+            {
+                throw new \Exception('upload error: ' . $res->error);
+            }
+
+            $obj=$this->google_drive_service->files->get($res->id,array('fields'=>'id,size'));
+            if($obj)
+            {
+                $this->register_link($obj->id,$obj->size);
+            }
         }
     }
 
@@ -203,25 +262,9 @@ define('GOOGLE_','GOOG');
 }
 
 
-session_start();
 
-if(!isset($_SESSION[GOOGLE_]))
-{
-    $_SESSION[GOOGLE_] = array(
-        'upload_token' => null,
-        'refresh_token' => null,
-        'current_filename' => null
-    );
-}
+ $gg_upload_helper = new GoogleDriveHelper();
+ $gg_upload_helper->execute();
 
 
-try{
-    $gg_upload_helper = new GoogleDriveHelper();
-    $gg_upload_helper->login();
-    $gg_upload_helper->uploadFile();
-}
-catch(Exception $e)
-{
-    echo $e->getMessage();
-}
 ?>

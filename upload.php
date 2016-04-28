@@ -1,7 +1,11 @@
 <?php
-include "drive_client.php";
 
-loadOdbc();
+include_once "dbTransactions.php";
+include_once "db.php";
+
+
+session_start();
+
 
 function temp_dir($subpath=null)
 {
@@ -82,7 +86,7 @@ function pdfGetImage($pdf_name)
                            }
                        }
                        if(isset($headers['Subtype']) && $headers['Subtype']==='Image' && ($headers['Filter']==='DCTDecode' || $headers['Filter']==='JPXDecode')
-                            && $headers['ColorSpace']==='DeviceRGB' && isset($headers[ImageName]))
+                            && $headers['ColorSpace']==='DeviceRGB' /*&& isset($headers[ImageName])*/)
                        {
                            $tag='stream';
                            $tgi=0;
@@ -180,28 +184,26 @@ if(isset($_FILES) && isset($_FILES['upfile']))
     }
 }
 
-if(isset($_POST['action']) && $_POST['action']==='file_insert')
+if(isset($_POST['action']) && $_POST['action']==='book_create')
 {
-    $dbase = odbc_connectDatabase();
-    if($dbase!=null)
+    $dbt=new \Database\Transactions\CreateBook();
+
+    $dbt->title=$_POST['title'];$dbt->author=$_POST['author'];$dbt->descr=$_POST['descr'];
+    $dbt->size=$_POST['file_size'];$dbt->year=$_POST['year'];
+    $dbt->hash=hash_file('md5',temp_dir($_POST['file_name']));
+    $img=pdfGetImage($_POST['file_name']);
+
+    if(strlen($img)==0)
     {
-        $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
-        $size=$_POST['file_size'];$year=$_POST['year'];
-        $hash=hash_file('md5',temp_dir($_POST['file_name']));
-        $img=pdfGetImage($_POST['file_name']);
-        if(strlen($img)==0)
-        {
-            $img=img_dir('book250x250.png');
-        }
-        
-        $res=$dbase->query("INSERT INTO BOOKS (TITLE,DESCR,AUTHORS,SIZE,YEAR,HASH,IMG_PATH) VALUES('$title','$descr','$author',$size,'$year','$hash','$img')");
-        if(!$res)
-        {
-            echo 'Book not inserted in DB: ' . mysql_error() . '<BR>';
-            exit();
-        }
-        $id = $res;
-        
+        $img=img_dir('book250x250.png');
+    }
+    $dbt->img=$img;
+    $dbt->vendor=$_POST['store'];
+    $dbt->filename=$_POST['file_name'];
+
+    $dbase=\Database\odbc()->connect();
+    if($dbase)
+    {
         $res=$dbase->query('SELECT ID FROM IT_SUBJECT');
         while($res->next(true))
         {
@@ -209,39 +211,52 @@ if(isset($_POST['action']) && $_POST['action']==='file_insert')
             $code=sprintf('topic%d',$subject);
             if(isset($_POST[$code]) && $_POST['file_name'])
             {
-                $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($subject,$id)");
+                $dbt->subjects = $subject;
             }
         }
-        
+
         $dbase->close();
-        
-	    createDriveClient($_POST['store'],$_POST['file_name'],$id);
-
-
     }
-    else {
-        # code...
-        echo 'database is not connected<BR>';
-    }
+
+    \Database\storeTransaction($dbt);
+
+    $drive_url=sprintf('drive_client.php?action=upload&store_code=%s&file_name=%s',$_POST['store'],urlencode($_POST['file_name']));
+
+    header('Location: ' . $drive_url);
+
 }
 if(isset($_GET['action']) && $_GET['action']==='book_delete')
 {
-    $dbase = odbc_connectDatabase();
+    $dbase = \Database\odbc()->connect();
+    $dbt = new \Database\Transactions\DeleteBook();
+    $id=$dbt->bookid=$_GET['bookid'];
     
-    $id=$_GET['bookid'];
-    $sql_query="DELETE FROM BOOKS WHERE ID=$id"; 
-    $dbase->query($sql_query);
-    $sql_query="DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id";
-    $dbase->query($sql_query);
-    $sql_query="DELETE FROM BOOKS_LINKS WHERE BOOK_ID=$id"; 
-    $dbase->query($sql_query);
+
+    $sql_query="SELECT VENDOR_CODE FROM FILE_STORE WHERE ID IN (SELECT STORE_ID FROM BOOKS_LINKS WHERE BOOK_ID=$id)";
+    $rec=$dbase->query($sql_query);
+    $vendor=null;
+    if($rec->next())
+    {
+        $vendor=$rec->field_value('VENDOR_CODE');
+    }
+
     $dbase->close();
-    header('Location: home.php');
+    if($vendor)
+    {
+        \Database\storeTransaction($dbt);
+        $drive_url=sprintf('drive_client.php?action=delete&store_code=%s&book_id=%s',$vendor,$id);
+        header('Location: ' . $drive_url);
+    }
+    else
+    {
+        $dbt->commit();
+        header('Location: home.php');
+    }
 }
 
 if(isset($_POST['action']) && $_POST['action']==='book_update')
 {
-    $dbase = odbc_connectDatabase();
+    $dbase = \Database\odbc()->connect();
     
     $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
     $year=$_POST['year'];$id=$_POST['bookid'];

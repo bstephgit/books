@@ -3,8 +3,6 @@ include "db.php";
 
 session_start();
 
-loadOdbc();
-
 function sizeUnit($input)
 {
     $size=0;
@@ -78,10 +76,9 @@ function print_book($rec,$subjects,$links)
         printf("<div class='book'><span class='book_descr'>%s</span></div>",$descr);
         if($links && $links->next())
         {
-           $url=$links->field_value('URL');
            $size=$links->field_value('FILE_SIZE');
            $vendor=$links->field_value('VENDOR');
-           echo sprintf("<div class='book'><a class='nav_element' href='%s'>Download</a> -- %s (%s)</div>",$url,$size,$vendor);
+           echo sprintf("<div class='book'><a class='nav_element' href='upload.php?action=download&bookid=%s'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
         }
         echo '</td>';
         echo '<td><div class="book"><ul class="book_tags"><LH>Tags</LH>';
@@ -131,7 +128,7 @@ function print_book($rec,$subjects,$links)
         <div class="nav_elements">
             <div>
             <?php 
-                $base=odbc_connectDatabase();
+                $base=Database\odbc()->connect();
                 if($base && $base->is_connected())
                 {
                     $rec = $base->query('SELECT ID,NAME FROM IT_SUBJECT');
@@ -164,7 +161,7 @@ function print_book($rec,$subjects,$links)
                 
                 $upload = isset($_GET['upload']) && $_GET['upload']==='1';
                 $edit = isset($_GET['edit']);
-                $base=odbc_connectDatabase();
+                $base=Database\odbc()->connect();
                 
                 if($edit)
                 {
@@ -202,7 +199,7 @@ function print_book($rec,$subjects,$links)
                 <?php if($upload){ ?>
                 <input type='hidden' name='file_name' id='fname'>
                 <input type='hidden' name='file_size' id='fsize'>
-                <input type='hidden' name='action' value='file_insert'>
+                <input type='hidden' name='action' value='book_create'>
                 <?php } if($edit){ ?>
                     <input type='hidden' name='action' value='book_update'>
                     <input type='hidden' name='bookid' value=''>
@@ -210,7 +207,7 @@ function print_book($rec,$subjects,$links)
                 <div class="nav_elements">
                         <p>Store<br>
                         <input type="radio" name="store" value="GOOG" checked> Google drive<br>
-                        <input type="radio" name="store" value="MSFT"> MS OneDrive<br>
+                        <input type="radio" name="store" value="MSOD"> MS OneDrive<br>
                         <input type="radio" name="store" value="AMZN"> Amazon<br>
                         <input type="radio" name="store" value="BOX"> Box.com<br>
                         <input type="radio" name="store" value="PCLD"> pCloud  </p>
@@ -249,13 +246,13 @@ function print_book($rec,$subjects,$links)
                     if (isset($_GET['bookid']))
                     { 
                         $id=$_GET['bookid'];
-                        $dbase = odbc_connectDatabase();
+                        $dbase = Database\odbc()->connect();
                         if($dbase->is_connected())
                         {
                             $query_str="SELECT TITLE,YEAR,DESCR,AUTHORS,SIZE,IMG_PATH FROM BOOKS WHERE ID=$id";
                             $rec=$dbase->query($query_str);
                             $subjects=$dbase->query('SELECT NAME FROM IT_SUBJECT WHERE ID IN (SELECT SUBJECT_ID FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID='.$id.')');
-                            $links=$dbase->query('SELECT lnks.URL,lnks.FILE_SIZE,fs.VENDOR FROM BOOKS_LINKS AS lnks, FILE_STORE AS fs WHERE lnks.BOOK_ID=' . $id . ' AND fs.ID=lnks.STORE_ID');
+                            $links=$dbase->query('SELECT lnks.FILE_ID,lnks.FILE_SIZE,fs.VENDOR FROM BOOKS_LINKS AS lnks, FILE_STORE AS fs WHERE lnks.BOOK_ID=' . $id . ' AND fs.ID=lnks.STORE_ID');
                             print_book($rec,$subjects,$links);
                             $dbase->close();
                         }
@@ -265,7 +262,7 @@ function print_book($rec,$subjects,$links)
              <?php 
                 if(count($_GET)==0)
                 {
-                   $dbase = odbc_connectDatabase();
+                   $dbase = Database\odbc()->connect();
                    $sql='SELECT ID,TITLE,IMG_PATH FROM BOOKS';
                    $rec=$dbase->query($sql);
                    if($rec)

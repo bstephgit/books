@@ -63,9 +63,8 @@ ChunkedUploader.prototype = {
             formData.append("upfile", data, self.file.name);
             self.upload_request.send(formData);
 
-            //console.log('http status code:', self.upload_request.status);
-            //console.log('http response:', self.upload_request.responseText);
-
+            console.log('http status code:', self.upload_request.status);
+            console.log('http response:', self.upload_request.responseText);
             // TODO
             // From the looks of things, jQuery expects a string or a map
             // to be assigned to the "data" option. We'll have to use
@@ -114,17 +113,16 @@ ChunkedUploader.prototype = {
     },
 
     // Public Methods ____________________________________________________
-    
+
     start: function () {
         this._upload();
     },
-    
-    pause: function () {
 
+    pause: function () {
         this.is_paused = true;
     },
-    resume: function () {
 
+    resume: function () {
         this.is_paused = false;
         this._upload();
     }
