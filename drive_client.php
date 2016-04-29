@@ -74,7 +74,7 @@ abstract class Client
     protected abstract function onCode($code);
     protected abstract function refreshToken();
 
-    function execute()
+    public function execute()
     {
         try
         {
@@ -86,6 +86,10 @@ abstract class Client
         catch(\Exception $e)
         {
             $ret=\Logs\logException($e);
+            if($ret && $ret>0)
+            {
+                header('Location: home.php?errid=' . $ret);
+            }
         }
     }
 
@@ -135,13 +139,14 @@ abstract class Client
                         throw new \Exception('Transaction not \'\Database\Transactions\CreateBook\' type.');
                     }
                     \Database\removeTransaction();
+                    unlink('temp/'.$dbt->filename);
                     header('Location: home.php?bookid=' . $this->getBookId() );
                 }
                 break;
             case 'download':
                 {
                     $this->downloadFile();
-                    header('Location: home.php');
+                    header('Location: home.php?bookid=' . $this->getBookId());
                 }
                 break;
             case 'delete':
@@ -165,7 +170,7 @@ abstract class Client
         }
     }
 
-    public function getSessionVar($var_name)
+    protected function getSessionVar($var_name)
     {
         if(isset($_SESSION[$this->vendor_name][$var_name]))
         {
@@ -173,11 +178,11 @@ abstract class Client
         }
         return null;
     }
-    public function setSessionVar($var_name,$value)
+    protected function setSessionVar($var_name,$value)
     {
         $_SESSION[$this->vendor_name][$var_name]=$value;
     }
-    public function unsetSessionVar($var_name)
+    protected function unsetSessionVar($var_name)
     {
         unset($_SESSION[$this->vendor_name][$var_name]);
     }
@@ -241,6 +246,10 @@ abstract class Client
     }
     protected function retrieve_parameters($obj)
     {
+        if(is_string($obj))
+        {
+            $obj=json_decode($obj);
+        }
         if(property_exists($obj,'access_token'))
         {
             $this->access_token = $obj->access_token;
@@ -332,6 +341,40 @@ abstract class Client
             $sql .= sprintf(' WHERE VENDOR_CODE=\'%s\'',$this->getDriveVendorName());
             $dbase->query($sql);
             $dbase->close();
+        }
+    }
+    protected function downloadToBrowser($tempfile,$content)
+    {
+        file_put_contents($tempfile, $content);
+
+        $dbase=\Database\odbc()->connect();
+        if($dbase)
+        {
+            $sql='SELECT FILE_SIZE,FILE_NAME FROM BOOKS_LINKS WHERE BOOK_ID=' . $this->getBookId();
+            $rec=$dbase->query($sql);
+            if($rec && $rec->next())
+            {
+                $filename = $rec->field_value('FILE_NAME');
+                $filesize = filesize($tempfile);
+                $dbase->close();
+
+                header("Content-Description: File Transfer");
+                header("Content-Disposition: attachment; filename=$filename");
+                header("Content-Transfer-Encoding: binary");
+                header("Content-Length: " . $filesize);
+                header('Content-Type: image/gif');
+                readfile($tempfile);
+                unlink($tempfile);
+            }
+            else
+            {
+                $dbase->close();
+                throw new \Exception('cannot get file name and size from database');
+            }
+        }
+        else
+        {
+            throw new \Exception('cannot connect to database');
         }
     }
 }

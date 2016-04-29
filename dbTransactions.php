@@ -95,6 +95,7 @@ class CreateBook extends Transaction
             $file_id=$this->file_id;
             $file_size=$this->file_size;
             $vendor=$this->vendor;
+            $filename=$this->filename;
 
             $res=$dbase->query("INSERT INTO BOOKS (TITLE,DESCR,AUTHORS,SIZE,YEAR,HASH,IMG_PATH) VALUES ('$title','$descr','$author',$size,'$year','$hash','$img')");
             if(!$res)
@@ -120,7 +121,7 @@ class CreateBook extends Transaction
                 $dbase->close();
                 throw new \Exception('cannot get file store id.');
             }
-            $dbase->query("INSERT BOOKS_LINKS(BOOK_ID,STORE_ID,FILE_ID,FILE_SIZE) VALUES($id,$store_id,'$file_id',$file_size)");
+            $dbase->query("INSERT BOOKS_LINKS(BOOK_ID,STORE_ID,FILE_ID,FILE_SIZE,FILE_NAME) VALUES($id,$store_id,'$file_id',$file_size,'$filename')");
 
             $dbase->close();
         }

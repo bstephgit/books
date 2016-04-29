@@ -40,52 +40,38 @@ define('GOOGLE_','GOOG');
     {
         return GOOGLE_;
     }
-	public function login()
-	{
+    protected function getRedirectUrl()
+    {
 		$client = $this->google_drive_service->getClient();
-		if (isset($_REQUEST['logout']))
-		{
-            $this->unsetSessionVar('upload_token');
-            $this->unsetSessionVar('refresh_token');
-		}
-
-		if (isset($_GET['code'])) {
-			$token= $client->authenticate($_GET['code']);
-            $this->setSessionVar('upload_token',$token);
-			$redirect = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
-            header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
-		}
-
-		if ($this->getSessionVar('upload_token')) {
-            if($client->getAccessToken()==null)
-            {
-                $client->setAccessToken($this->getSessionVar('upload_token'));
-            }
-            if ($client->isAccessTokenExpired()) 
-            {
-                $this->unsetSessionVar('upload_token');
-                $refresh_token=$client->getRefreshToken();
-                if($refresh_token)
-                {
-                    $client->refreshToken($refresh_token);
-                    $this->setSessionVar('upload_token',$client->getAccessToken());
-                }
-                else
-                {
-                    throw new \Exception('Cannot refresh auth (token null)');
-                }
-            }
-            else
-            {
-                $client->setAccessToken($this->getSessionVar('upload_token'));
-            }
-		}
-        else 
+        return $client->createAuthUrl();
+    }
+    protected function isExpired()
+    {
+		$client = $this->google_drive_service->getClient();
+        return $client->isAccessTokenExpired();
+    }
+    protected function onCode($code)
+    {
+		$client = $this->google_drive_service->getClient();
+        $token= $client->authenticate($code);
+        $this->retrieve_parameters( $client->getAccessToken() );
+    }
+    protected function refreshToken()
+    {
+		$client = $this->google_drive_service->getClient();
+        $refresh_token=$client->getRefreshToken();
+        if($refresh_token)
         {
-            $authUrl = $client->createAuthUrl();
-            header('Location: ' . filter_var($authUrl, FILTER_SANITIZE_URL));
-		}
-	}
+            $client->refreshToken($refresh_token);
+            $this->access_token=$client->getAccessToken();
+            $this->refresh_token=$client->getRefreshToken();
+        }
+        else
+        {
+            throw new \Exception('Cannot refresh auth (token null)');
+        }
+    }
+    
     private function buildService($userEmail)
 	{
         $client = new Google_Client();
@@ -110,7 +96,7 @@ define('GOOGLE_','GOOG');
 	}
     public function deleteFile()
     {
-        if($this->getSessionVar('upload_token'))
+        if($this->isLogged())
         {
             $file_id=$this->getStoreFileId();
             if($file_id)
@@ -129,20 +115,22 @@ define('GOOGLE_','GOOG');
     }
     public function downloadFile()
     {
-        if($this->getSessionVar('upload_token'))
+        if($this->isLogged())
         {
             $file_id=$this->getStoreFileId();
             if($file_id)
             {
                 $obj=$this->google_drive_service->files->get($file_id,array('fields'=>'name'));
-                $content=$this->google_drive_service->files->get($res->id,array('alt'=>'media'));
-                file_put_contents('temp/' . $obj->name,$content);
+                $content=$this->google_drive_service->files->get($file_id,array('alt'=>'media'));
+                
+                $tmpfile = realpath('temp') . '/' . $obj->name;
+                $this->downloadToBrowser($tmpfile ,$content);
             }
         }
     }
     public function uploadFile()
     {
-        if($this->getSessionVar('upload_token'))
+        if($this->isLogged())
         {
 		    $file_name = $this->drive_file->getName();
 		    $this->drive_file->setParents( array($this->getDestFolder("Books")->getId()) );

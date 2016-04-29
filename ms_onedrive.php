@@ -130,7 +130,11 @@ class MSOneDriveHelper extends Drive\Client
             if($file_id)
             {
                 $file_obj = new \Krizalys\Onedrive\File($this->client,$file_id);
-                file_put_contents('temp/' . $obj->name,$file_obj->fetchContent());
+                $name=$file_obj->getName();
+
+                $tmpfile = realpath('temp') . '/' . $name;
+                $content=$file_obj->fetchContent(array(CURLOPT_FOLLOWLOCATION => true));
+                $this->downloadToBrowser($tmpfile,$content);
             }
         }
     }

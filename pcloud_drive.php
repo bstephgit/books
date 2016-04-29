@@ -153,10 +153,9 @@ class PCloudDrive extends Drive\Client
                 $metadata_url = self::API_URL . '/checksumfile?fileid=' . $fileid;
                 $metadata = json_decode($this->curl_request($metadata_url,$options));
 
-                $opt_output = array(
-                    CURLOPT_FILE => 'temp/' . $metadata->metadata->name
-                );
-                $this->curl_request($download_url, array_merge($options,$opt_output));
+                $tmpfile = realpath('temp') . '/' . $metadata->metadata->name;
+                $content=$this->curl_request($download_url, $options);
+                $this->downloadToBrowser($tmpfile,$content);
             }
         }
     }

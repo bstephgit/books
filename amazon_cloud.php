@@ -172,11 +172,12 @@ class AmazonCloudHelper extends Drive\Client
                     {
 
                         $url=sprintf('%s/nodes/%s/content',$content_url,$file_id);
+
+                        $tmpfile = realpath('temp') . '/' . $mdata->name;
                         
-                        $opt_output = array(
-                            CURLOPT_FILE => 'temp/' . $mdata->name
-                            );
-                        $this->curl_request($url,array_merge($options,$opt_output));
+                        $content = $this->curl_request($url,$options);
+
+                        $this->downloadToBrowser($tmpfile,$content);
                     }
                 }
             }

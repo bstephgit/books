@@ -112,11 +112,11 @@ class BoxDrive extends Drive\Client
                 $url= self::API_URL . sprintf('/files/%s',$fileid);
                 $file_info = json_decode($this->curl_request($url,$options));
 
+                $tmpfile = realpath('temp') . '/' . $file_info->name;
                 $url = self::API_URL . sprintf('/files/%s/content',$fileid);
-                $opt_output = array(
-                    CURLOPT_FILE => 'temp/' . $file_info->name
-                );
-                $this->curl_request($url, array_merge($options,$opt_output));
+                
+                $content=$this->curl_request($url, $options);
+                $this->downloadToBrowser($tmpfile,$content);
             }
         }
     }
