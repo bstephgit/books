@@ -35,9 +35,20 @@ class BoxDrive extends Drive\Client
             'box_login=' . urlencode('tcn75323@gmail.com');
         return $url;
     }
-    protected function isExpired()
+    public function isExpired()
     {
-        return ($this->token->expires_in + $this->token->created <= time());
+        try
+        {
+            if(!property_exists($this,'token')) throw new \Exception('token not found');
+            if(!property_exists($this->token,'expires_in')) throw new \Exception('expires_in not found');
+            if(!property_exists($this->token,'created')) throw new \Exception('created not found');
+            return (($this->token->expires_in + $this->token->created)<=time());
+        }
+        catch(\Exception $e)
+        {
+            \Logs\logWarning($e->getMessage());
+        }
+        return false;
     }
     protected function onCode($code)
     {
@@ -53,10 +64,11 @@ class BoxDrive extends Drive\Client
         {
             throw new Exception($response->error);
         }
+        \Logs\logDebug(var_export($response,true));
 
         $this->set_token($response);
     }
-    protected function refreshToken()
+    public function refreshToken()
     {
         if($this->token->refresh_token)
         {
@@ -70,10 +82,12 @@ class BoxDrive extends Drive\Client
             {
                 throw new Exception($response->error);
             }
+            \Logs\logDebug(var_export($response,true));
             $this->set_token($response);
         }
         else
         {
+            $this->set_token(null);
             throw new Exception('Refresh token not found');
         }
     }
@@ -172,7 +186,7 @@ class BoxDrive extends Drive\Client
         return (object) array (
             'access_token' => $this->getAccessToken(),
             'book_folder' => $book_folder->id,
-            'urls' => array('download' => self::API_URL, 'upload' => self::UPLOAD_URL, 'delete' => self::API_URL)
+            'urls' => array('download' => self::API_URL.'/files/%s/content', 'upload' => self::UPLOAD_URL, 'delete' => self::API_URL.'/files/%s')
         );
         return $urls;
     }

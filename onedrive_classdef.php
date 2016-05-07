@@ -52,38 +52,49 @@ class MSOneDriveHelper extends Drive\Client
         return $login_url;
     }
     
-    protected function isExpired()
+    public function isExpired()
     {
         \Logs\logDebug($this->client->getAccessTokenStatus());
-        \Logs\logDebug('token expires '.date('d-m-Y H:i',$this->token->expires_in+$this->token->created));
-        \Logs\logDebug('get token expires '.$this->client->getTokenExpire());
-        return $this->client->getAccessTokenStatus()===-2;
+       return $this->client->getAccessTokenStatus()===-2;
     }
     protected function onCode($code)
     {
         $this->client->obtainAccessToken(CLIENT_SECRET,$code);
         $state=$this->client->getState();
         $state->token->data->{'created'} = $state->token->obtained;
+        \Logs\logDebug(var_export($state->token->data,true));
         $this->set_token( $state->token->data );
     }
-    protected function refreshToken()
+    public function refreshToken()
     {
-        $options=array( CURLOPT_HTTPHEADER => array( 'Content-Type: application/x-www-form-urlencoded') );
-        $body = 'client_id=' . CLIENT_ID . ' &redirect_uri=' . REDIRECT_URL . '&client_secret=' . CLIENT_SECRET .
-                '&refresh_token=' . $this->token->refresh_token . '&grant_type=refresh_token';
-        $response = $this->curl_post('https://login.live.com/oauth20_authorize.srf',$body,$options);
+        if($this->token && $this->token->refresh_token)
+        {
+            $options=array( CURLOPT_HTTPHEADER => array( 'Content-Type: application/x-www-form-urlencoded') );
+            $body = 'client_id=' . CLIENT_ID . ' &redirect_uri=' . REDIRECT_URL . '&client_secret=' . CLIENT_SECRET .
+                    '&refresh_token=' . $this->token->refresh_token . '&grant_type=refresh_token';
+            $response = $this->curl_post('https://login.live.com/oauth20_authorize.srf',$body,$options);
 
-        $state = (object)array('redirect_uri' => null,
-                        'token'       => array( 'obtained' => time(), 'data' => json_decode($response) )
-            );
-        $option = array('client_id' => CLIENT_ID,'state' => $state );
-        $this->client = new \Krizalys\Onedrive\Client($option);
+            \Logs\logDebug(var_export($response));
 
-        $state->token->data->{'created'} = $state->token->obtained;
 
-        $this->set_token( $state->token->data );
-        $this->setSessionVar('onedrive.client.state',$this->client->getState());
+            $state = (object)array('redirect_uri' => null,
+                            'token'       => array( 'obtained' => time(), 'data' => json_decode($response) )
+                );
+            $option = array('client_id' => CLIENT_ID,'state' => $state );
+            $this->client = new \Krizalys\Onedrive\Client($option);
 
+            $state->token->data->{'created'} = $state->token->obtained;
+            \Logs\logDebug(var_export($state->token->data,true));
+
+            $this->set_token( $state->token->data );
+            $this->setSessionVar('onedrive.client.state',$this->client->getState());
+        }
+        else
+        {
+            $this->set_token( null );
+            $this->unsetSessionVar('onedrive.client.state');
+            throw new \Exception('refresh token is null');
+        }
     }
 
 	public function uploadFile()
@@ -143,12 +154,12 @@ class MSOneDriveHelper extends Drive\Client
             return (object) array(
                 'access_token' => $this->getAccessToken(),
                 'book_folder' => $book_folder->getId(),
-                'urls' => array('download' => $base_url, 'upload' => $base_url, 'delete' => $base_url)
+                'urls' => array('download' => $base_url, 'upload' => $base_url . '/drive/items/{parent-id}:/{filename}:/content', 'delete' => $base_url)
                 );
         }
         else
         {
-            throw new Exception\Exception('not logged');
+            throw new \Exception('not logged');
         }
     }
     private function getBookFolder()

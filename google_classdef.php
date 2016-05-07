@@ -47,18 +47,20 @@ class GoogleDriveHelper extends Drive\Client
 		$client = $this->google_drive_service->getClient();
         return $client->createAuthUrl();
     }
-    protected function isExpired()
+    public function isExpired()
     {
 		$client = $this->google_drive_service->getClient();
+        \Logs\logDebug($client->isAccessTokenExpired());
         return $client->isAccessTokenExpired();
     }
     protected function onCode($code)
     {
 		$client = $this->google_drive_service->getClient();
         $token= $client->authenticate($code);
+        \Logs\logDebug(var_export($token,true));
         $this->set_token( $token );
     }
-    protected function refreshToken()
+    public function refreshToken()
     {
 		$client = $this->google_drive_service->getClient();
         $refresh_token=$client->getRefreshToken();
@@ -66,11 +68,13 @@ class GoogleDriveHelper extends Drive\Client
         {
             $client->refreshToken($refresh_token);
             $token=$client->getAccessToken();
+            \Logs\logDebug(var_export($token,true));
             $this->set_token($token);
         }
         else
         {
             $this->set_token(null);
+            throw new \Exception('no refresh token');
         }
     }
 
@@ -96,9 +100,16 @@ class GoogleDriveHelper extends Drive\Client
         $client->setRedirectUri($redirect_uri);
         $client->addScope("https://www.googleapis.com/auth/drive");
         $client->setAccessType("offline");
-		if($this->token)
+		if($this->token && $this->token->access_token && $this->token->refresh_token)
         {
-            $client->setAccessToken(json_encode($this->token));
+            \Logs\logDebug(var_export($this->token,true));
+             $client->setAccessToken(json_encode($this->token));
+             \Logs\logDebug(var_export($client->getAccessToken(),true));
+        }
+        else
+        {
+            \Logs\logDebug('setApprovalPrompt');
+            $client->setApprovalPrompt('force');
         }
         $this->google_drive_service = new Google_Service_Drive($client);
 	}
@@ -169,12 +180,12 @@ class GoogleDriveHelper extends Drive\Client
     public function store_info()
     {
         $book_folder_id=$this->getDestFolder("Books")->getId();
-        $root_url=$this->google_drive_service->rootUrl;
-
+        $root_url='https://www.googleapis.com/drive/v3/files';
+        
         return (object) array(
             'access_token' => $this->getAccessToken(),
             'book_folder' => $book_folder_id,
-            'urls' => array('download' => $root_url, 'upload' => $root_url, 'delete' => $root_url)
+            'urls' => array('download' => $root_url . '/%s', 'upload' => $root_url, 'delete' => $root_url . '/%s')
             );
     }
     private function uploadSimple()

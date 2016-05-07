@@ -45,6 +45,7 @@ $html_response="<html><body>
     <script type='text/javascript'>
         var info_token='%s';
         localStorage.setItem('%s',info_token);
+        document.write(info_token);
         window.close();
     </script>
 </body></html>";
@@ -65,16 +66,32 @@ if(isset($_GET['store_code']))
             if(isset($_GET['html']))
             {
                 $info=json_encode($client->store_info());
+                \Logs\logDebug(sprintf($html_response,$info,$store));
                 echo sprintf($html_response,$info,$store);
             }
             else
             {
+                \Logs\logDebug('raw resp: ' . var_export($client->store_info(),true));
                 echo json_encode($client->store_info());
             }
            
         }
         else
         {
+            if($client->isExpired())
+            {
+                try{
+                    \Logs\logDebug('refresh token');
+                    $client->refreshToken();
+                    echo json_encode($client->store_info());
+                    exit;
+                }
+                catch(\Exception $e)
+                {
+                    \Logs\logWarning($e->getMessage());
+                }
+            }
+            \Logs\logDebug('redirect');
             echo json_encode( (object)array( 'redirect' => $client->getRedirectUrl() ) );
         }
     }

@@ -41,7 +41,7 @@ function logBase($level,$msg)
 {
     $e = new Entry();
 
-    $bt=debug_backtrace()[1];
+    $bt=debug_backtrace()[2];
 
     $e->level=$level;
     $e->file=basename($bt['file']);

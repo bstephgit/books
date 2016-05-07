@@ -160,7 +160,7 @@ class PCloudDrive extends Drive\Client
         return (object) array(
             'access_token' => $this->getAccessToken(),
             'book_folder' => $book_folder->folderid,
-            'urls' => array('download' => $base_url, 'upload' => $base_url, 'delete' => $base_url)
+            'urls' => array('download' => $base_url. '/getfilelink?fileid=%s&forcedownload=1', 'upload' => $base_url . '/uploadfile', 'delete' => $base_url . '/deletefile?fileid=%s')
             );
     }
     private function getBookFolder()

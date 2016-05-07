@@ -39,6 +39,7 @@ class AmazonCloudHelper extends Drive\Client
             )
         );
         $response=$this->curl_post(self::TOKEN_URL,$body,$options);
+        \Logs\logDebug(var_export($response,true));
         $this->set_token($response);
     }
     public function getRedirectUrl()
@@ -50,14 +51,25 @@ class AmazonCloudHelper extends Drive\Client
                 . '&redirect_uri=' . self::REDIRECT_URI ;
         return $url;
     }
-    protected function isExpired()
+    public function isExpired()
     {
-        return (($this->token->expires_in + $this->token->created)<=time());
+        try
+        {
+            if(!property_exists($this,'token')) throw new \Exception('token not found');
+            if(!property_exists($this->token,'expires_in')) throw new \Exception('expires_in not found');
+            if(!property_exists($this->token,'created')) throw new \Exception('created not found');
+            return (($this->token->expires_in + $this->token->created)<=time());
+        }
+        catch(\Exception $e)
+        {
+            \Logs\logWarning($e->getMessage());
+        }
+        return false;
     }
 
-    protected function refreshToken()
+    public function refreshToken()
     {
-        if($this->token->refresh_token==null)
+        if($this->token==null || $this->token->refresh_token==null)
         {
             throw new \Exception('no refresh token');
         }
@@ -72,12 +84,8 @@ class AmazonCloudHelper extends Drive\Client
             )
         );
         $response=$this->curl_post(self::TOKEN_URL,$body,$options);
+        \Logs\logDebug(var_export($response,true));
         $this->set_token($response);
-    }
-
-    protected function getTokenUrl()
-    {
-        throw new \Exception('Not implemented');
     }
 
     public function store_info()
