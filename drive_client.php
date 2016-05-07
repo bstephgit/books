@@ -10,7 +10,7 @@ include_once "Log.php";
 session_start();
 
 
-abstract class Client
+class Client
 {
     private $file_name;
     private $bookid;
@@ -62,19 +62,17 @@ abstract class Client
     public function getFileName(){ return $this->file_name; }
     public function getBookId() { return $this->bookid; }
     public function setBookId($bid) { $this->bookid=$bid; }
-    public function isLogged() { return ($this->access_token && !$this->isExpired()); }
+    public function uploadFile() { throw new \Exception('must be overriden by child class'); }
+    public function downloadFile() { throw new \Exception('must be overriden by child class'); }
+    public function deleteFile() { throw new \Exception('must be overriden by child class'); }
+    public function getDriveVendorName() {  throw new \Exception('must be overriden by child class'); }
+    public function getRedirectUrl() { throw new \Exception('must be overriden by child class'); }
+    public function getTokenUrl() { throw new \Exception('must be overriden by child class'); }
+    public function isExprired() { throw new \Exception('must be overriden by child class'); }
+    public function onCode($code) { throw new \Exception('must be overriden by child class'); }
+    public function onExpired() { throw new \Exception('must be overriden by child class'); }
 
-    protected abstract function uploadFile();
-    protected abstract function downloadFile();
-    protected abstract function deleteFile();
-    protected abstract function getDriveVendorName();
-    protected abstract function getRedirectUrl();
-    //protected abstract function getTokenUrl();
-    protected abstract function isExpired();
-    protected abstract function onCode($code);
-    protected abstract function refreshToken();
-
-    public function execute()
+    function execute()
     {
         try
         {
@@ -85,26 +83,19 @@ abstract class Client
         }
         catch(\Exception $e)
         {
-            $ret=\Logs\logException($e);
-            if($ret && $ret>0)
-            {
-                header('Location: home.php?errid=' . $ret);
-            }
+            \Logs\logException($e);
         }
     }
 
     public function login()
     {
-        if(!$this->access_token)
-        {
-            $this->initFromDb();
-        }
+        loadDbLogin();
 
         if($this->access_token)
         {
             if($this->isExpired())
             {
-                $this->refreshToken();
+                $this->onExpired();
             }
             return true;
         }
@@ -132,21 +123,20 @@ abstract class Client
                     if(is_a($dbt,'\Database\Transactions\CreateBook'))
                     {
                         $dbt->commit();
-                        $this->setBookId($dbt->bookid);
+                        $this->setBookId($dbt->getBookId());
                     }
                     else
                     {
                         throw new \Exception('Transaction not \'\Database\Transactions\CreateBook\' type.');
                     }
                     \Database\removeTransaction();
-                    unlink('temp/'.$dbt->filename);
                     header('Location: home.php?bookid=' . $this->getBookId() );
                 }
                 break;
             case 'download':
                 {
                     $this->downloadFile();
-                    header('Location: home.php?bookid=' . $this->getBookId());
+                    header('Location: home.php?downloaded=1');
                 }
                 break;
             case 'delete':
@@ -162,15 +152,14 @@ abstract class Client
                         throw new \Exception('Transaction not \'\Database\Transactions\DeleteBook\' type.');
                     }
                     \Database\removeTransaction();
-                    header('Location: home.php');
+                    header('Location: home.php?deleted=1');
                 }
                 break;
             default:
                 throw new \Exception('Unknown action: ' . $this->action);
         }
     }
-
-    protected function getSessionVar($var_name)
+    public function getSessionVar($var_name)
     {
         if(isset($_SESSION[$this->vendor_name][$var_name]))
         {
@@ -178,19 +167,19 @@ abstract class Client
         }
         return null;
     }
-    protected function setSessionVar($var_name,$value)
+    public function setSessionVar($var_name,$value)
     {
         $_SESSION[$this->vendor_name][$var_name]=$value;
     }
-    protected function unsetSessionVar($var_name)
+    public function unsetSessionVar($var_name)
     {
         unset($_SESSION[$this->vendor_name][$var_name]);
     }
-
     protected function curl_request($url, $options = array())
     {
         $curl = curl_init();
-        $whole_options=array(
+
+        $defaultOptions=array(
             // General options.
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_AUTOREFERER    => true,
@@ -201,13 +190,8 @@ abstract class Client
             CURLOPT_URL            => $url
         );
 
-        if($options)
-        {
-            $whole_options=$whole_options + $options;
-        }
-        curl_setopt_array($curl, $whole_options);
+        curl_setopt_array($curl,$defaultOptions + $options);
         $result = curl_exec($curl);
-
         if (false === $result) {
             curl_close($curl);
             throw new \Exception('curl_exec() failed: ' . curl_error($curl));
@@ -222,57 +206,61 @@ abstract class Client
              CURLOPT_POST       => true,
              CURLOPT_POSTFIELDS => $body
          );
-        if($options)
-        {
-            $post_options=$options+$post_options;
-        }
-        return $this->curl_request($url,$post_options);
+        return $this->curl_request($url,array_merge($options,$post_options));
     }
-    private function initFromDb()
+    private function loadDbLogin()
     {
         $obj=json_decode($this->loadLoginFromDb());
         if(property_exists($obj,'access_token'))
         {
             $this->access_token=$obj->access_token;
         }
+        else
+        {
+            \Logs\logWarning($this->getDriveVendorName() . ': no access token');
+        }
         if(property_exists($obj,'refresh_token'))
         {
             $this->refresh_token=$obj->refresh_token;
+        }
+        else
+        {
+            \Logs\logWarning($this->getDriveVendorName() . ': no refresh token');
         }
         if(property_exists($obj,'expires_in'))
         {
             $this->expires_in=$obj->expires_in;
         }
+        else
+        {
+            \Logs\logWarning($this->getDriveVendorName() . ': no expiration');
+        }
     }
     protected function retrieve_parameters($obj)
     {
-        if(is_string($obj))
+        if(property_exists($response,'access_token'))
         {
-            $obj=json_decode($obj);
-        }
-        if(property_exists($obj,'access_token'))
-        {
-            $this->access_token = $obj->access_token;
+            $this->access_token = $response->access_token;
         }
         else
         {
             \Logs\logWarning($this->vendor_name . ': no access token');
         }
 
-        if(property_exists($obj,'refresh_token'))
+        if(property_exists($response,'refresh_token'))
         {
-            $this->refresh_token = $obj->refresh_token;
+            $this->setSessionVar('refresh_token',$response->refresh_token);
         }
         else
         {
             \Logs\logWarning($this->vendor_name . ': no refresh token');
         }
-        if(property_exists($obj,'expires_in'))
+        if(property_exists($response,'expires_in'))
         {
-            $this->expires_in = time() + intval($obj->expires_in);
+            $this->expires_in = time() + intval($response->expires_in);
         }
-        $save=json_encode((object)array('access_token' => $this->access_token,'refresh_token' => $this->refresh_token, 'expires_in' => $this->expires_in));
-        $this->saveLoginToDb($save);
+        $save=json_encode(array('access_token' => $this->access_token,'refresh_token' => $this->refresh_token, 'expires_in' => $this->expires_in));
+        $this->
     }
     protected function register_link($file_id,$size)
     {
@@ -341,40 +329,6 @@ abstract class Client
             $sql .= sprintf(' WHERE VENDOR_CODE=\'%s\'',$this->getDriveVendorName());
             $dbase->query($sql);
             $dbase->close();
-        }
-    }
-    protected function downloadToBrowser($tempfile,$content)
-    {
-        file_put_contents($tempfile, $content);
-
-        $dbase=\Database\odbc()->connect();
-        if($dbase)
-        {
-            $sql='SELECT FILE_SIZE,FILE_NAME FROM BOOKS_LINKS WHERE BOOK_ID=' . $this->getBookId();
-            $rec=$dbase->query($sql);
-            if($rec && $rec->next())
-            {
-                $filename = $rec->field_value('FILE_NAME');
-                $filesize = filesize($tempfile);
-                $dbase->close();
-
-                header("Content-Description: File Transfer");
-                header("Content-Disposition: attachment; filename=$filename");
-                header("Content-Transfer-Encoding: binary");
-                header("Content-Length: " . $filesize);
-                header('Content-Type: image/gif');
-                readfile($tempfile);
-                unlink($tempfile);
-            }
-            else
-            {
-                $dbase->close();
-                throw new \Exception('cannot get file name and size from database');
-            }
-        }
-        else
-        {
-            throw new \Exception('cannot connect to database');
         }
     }
 }

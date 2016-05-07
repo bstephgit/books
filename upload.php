@@ -2,7 +2,7 @@
 
 include_once "dbTransactions.php";
 include_once "db.php";
-include_once "Log.php";
+
 
 session_start();
 
@@ -278,34 +278,5 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     }
     $dbase->close();
     header('Location: home.php?bookid='.$id);
-}
-
-if(isset($_GET['action']) && $_GET['action']==='download')
-{
-    if(isset($_GET['bookid']))
-    {
-        $dbase = \Database\odbc()->connect();
-        $bookid=$_GET['bookid'];
-        $sql="SELECT VENDOR_CODE FROM FILE_STORE WHERE ID IN (SELECT STORE_ID FROM BOOKS_LINKS WHERE BOOK_ID=$bookid)";
-        $rec=$dbase->query($sql);
-        if($rec && $rec->next())
-        {
-            $store=$rec->field_value('VENDOR_CODE');
-            $dbase->close();
-
-            $drive_url=sprintf('drive_client.php?action=download&book_id=%s&store_code=%s',$bookid,$store);
-            header('Location: ' . $drive_url);
-        }
-        else
-        {
-            $dbase->close();
-            $errid=\Logs\logErr('cannot get vendor code from database');
-            header('Location: home.php?errid=' . $errid);
-        }
-    }
-    else
-    {
-        header('Location: home.php');
-    }
 }
 ?>

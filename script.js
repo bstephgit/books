@@ -1,3 +1,128 @@
+
+
+function storeUplForm(form)
+{
+    var subjects=[];
+    var index=1;
+    while(true)
+    {
+        var name='topic'+index;
+        if(form[name])
+        {
+            if(form[name].checked)
+            {
+                subjects.push(name);
+            }
+        }
+        else
+        {
+            break;
+        }
+        index++;
+    }
+    obj = {
+        'title': form.title.value,
+        'author': form.author.value,
+        'file': form.file_upload.files[0],
+        'year': form.year.value,
+        'descr': form.descr.value,
+        'store': form.store.value,
+        'subjects': subjects
+    };
+    localStorage.setItem('upload', JSON.stringify(obj));
+}
+
+function Store(name)
+{
+    console.log('create store');
+    this.name = name;
+}
+
+Store.prototype.login = function (callback)
+{
+    var self = this;
+    var request = new XMLHttpRequest();
+    var url = '/books/store.php?action=login&store_code=' + self.name;
+
+
+    request.onerror = function (e) {
+        console.log('erreur\n' + e);
+    };
+
+    console.log('login url:',url);
+    request.open('GET', url, true); 
+
+    request.onload = function (e) {
+
+        if (request.status === 200)
+        {
+            console.log('response:',request.response);
+
+            try
+            {
+                var obj = JSON.parse(request.response);
+                if(obj.redirect)
+                {
+                    window.open(obj.redirect, "", "width=750,height=420");
+                    var timerobj = setInterval(
+                        function ()
+                        {
+                            try
+                            {
+                                var info = localStorage.getItem(self.name);
+                                if(info!=null)
+                                {
+                                    clearInterval(timerobj);
+                                    callback(JSON.parse(info));
+                                }
+                            }
+                            catch (err)
+                            {
+                                console.error(err);
+                                clearInterval(timerobj);
+                                callback(err);
+                            }
+                        }
+                        ,1500);
+                }
+                if(obj.access_token)
+                {
+                    callback(obj);
+                }
+            }
+            catch (err)
+            {
+                console.error(err);
+                callback(err);
+            }
+        }
+        else
+        {
+            console.log('request returned status',request.status,'text',request.statusText);
+        }
+    };
+    request.send();
+    this.getRequest = function()
+    {
+       return request;
+    }
+};
+
+Store.prototype.isLogged = function () {
+    if(this.hasOwnProperty('access_token'))
+    {
+        return this.access_token.length > 0;
+    }
+    return false;
+};
+
+Store.prototype.upload = function (file) {
+    if(!this.isLogged())
+    {
+        throw new Error('not logged to store');
+    }
+};
+
 function ChunkedUploader(file, options) {
     if (!this instanceof ChunkedUploader) {
         return new ChunkedUploader(file, options);
@@ -5,7 +130,7 @@ function ChunkedUploader(file, options) {
  
     console.log('create chunk uploader');
     this.file = file;
- 
+    
     this.options = Object.assign({
         url: '/books/upload.php'
     }, options);
@@ -162,7 +287,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function onFormSubmit(e) {
         var ok = true;
         
-        if(ok && upload_form.file_upload.files.length==0)
+        /*if(ok && upload_form.file_upload.files.length==0)
         {
             alert('error: no file selected');
             ok = false;
@@ -176,16 +301,30 @@ document.addEventListener("DOMContentLoaded", function() {
         {
             alert('error: no author');
             ok = false;
-        }
+        }*/
         // Prevent default form submission
         e.preventDefault();
-        if(ok)
+        
         {
             if(uploader)
             {
                 var submit_btn = document.getElementById('submit_btn');
-                uploader.start();        
-                submit_btn.disabled = true;
+                var store = new Store(upload_form.store.value);
+                uploader.store = store;
+                store.login(
+                    function(obj)
+                    {
+                        if (obj instanceof Error)
+                        {
+                            console.error(obj);
+                        }
+                        else
+                        {
+                            console.log('login callback %o', obj);
+                        }
+                    });
+                //uploader.start();        
+                //submit_btn.disabled = true;
             }
             else if(file_input)
             {

@@ -80,9 +80,7 @@ function logException(\Exception $e)
     }
     $function .= $t['function'];
     $entry->function=str_replace('\\','\\\\', $function) ;
-    var_dump($entry);
     $ret=$entry->insert();
-    var_dump($ret);
    
     return $ret;
 }
