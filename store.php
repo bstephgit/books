@@ -44,7 +44,7 @@ function createDriveClient($drive_code)
 $html_response="<html><body>
     <script type='text/javascript'>
         var info_token='%s';
-        localStorage.setItem('%s',info_token);
+        window.opener.postMessage(info_token,window.location.origin);
         document.write(info_token);
         window.close();
     </script>
@@ -96,5 +96,30 @@ if(isset($_GET['store_code']))
         }
     }
 }    
-    
+
+if(isset($_GET['bookid']))
+{
+  $bookid=$_GET['bookid'];
+  $dbase=\Database\odbc()->connect();
+  if($dbase)
+  {
+    $sql="SELECT FILE_ID,FILE_NAME,VENDOR_CODE FROM BOOKS_LINKS,FILE_STORE AS FS WHERE BOOK_ID=$bookid AND STORE_ID=FS.ID";
+    $rec=$dbase->query($sql);
+    if($rec->next())
+    {
+      $fileid=$rec->field_value('FILE_ID');
+      $filename=$rec->field_value('FILE_NAME');
+      $vendor=$rec->field_value('VENDOR_CODE');
+      echo "{\"fileid\": \"$fileid\", \"filename\":\"$filename\", \"vendor_code\": \"$vendor\"}";
+    }
+    $dbase->close();
+  }
+  else
+  {
+    http_response_code(400);
+    echo '{error:"cannot open databse"}';
+  }
+  exit;
+}
+
 ?>

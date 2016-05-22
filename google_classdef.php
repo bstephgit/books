@@ -180,12 +180,17 @@ class GoogleDriveHelper extends Drive\Client
     public function store_info()
     {
         $book_folder_id=$this->getDestFolder("Books")->getId();
-        $root_url='https://www.googleapis.com/drive/v3/files';
-        
+        $root_url='https://www.googleapis.com/drive/v3';
+        $upload_url='https://www.googleapis.com/upload/drive/v3';
         return (object) array(
             'access_token' => $this->getAccessToken(),
             'book_folder' => $book_folder_id,
-            'urls' => array('download' => $root_url . '/%s', 'upload' => $root_url, 'delete' => $root_url . '/%s')
+            'urls' => array(
+                    'download' => array( 'method' => 'GET', 'url' => $root_url . '/files/{fileid}?alt=media', 'headers' => array('Authorization: Bearer {accesstoken}')), 
+                    'upload' => array('method' => 'POST', 'url' => $upload_url . '/files?uploadType=multipart', 
+																			'headers' => array('Authorization: Bearer {accesstoken}'),
+																			'body' => array( 'metadata' => array('data' => '{ "name": "{filename}", "parents": ["{parentid}"] }','type'=>'application/json'), 'file' => '{filecontent}')),
+                    'delete' => array( 'method' => 'DELETE', 'url' => $root_url . '/files/{fileid}') )
             );
     }
     private function uploadSimple()

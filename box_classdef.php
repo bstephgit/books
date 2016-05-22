@@ -182,13 +182,20 @@ class BoxDrive extends Drive\Client
 
     public function store_info()
     {
-        $book_folder=$this->getBookFolder();
-        return (object) array (
-            'access_token' => $this->getAccessToken(),
-            'book_folder' => $book_folder->id,
-            'urls' => array('download' => self::API_URL.'/files/%s/content', 'upload' => self::UPLOAD_URL, 'delete' => self::API_URL.'/files/%s')
-        );
-        return $urls;
+        if($this->isLogged())
+        {
+            $book_folder=$this->getBookFolder();
+            return (object) array (
+                'access_token' => $this->getAccessToken(),
+                'book_folder' => $book_folder->id,
+                'urls' => array('download' => array( 'method' => 'GET', 'url' => self::API_URL.'/files/{fileid}/content' ),
+                                'upload' => array( 'method' => 'POST', 'url' => self::UPLOAD_URL ,
+                                                    'header' => array('Authorization: Bearer {access_token}'),
+                                                    'body' => array( 'attributes' => '"name":"{filename}", "parent":{"id":"{parentid}"}', 'file' => '{filecontent}' ) ),
+                                'delete' => array('method' => 'DELETE', 'url' => self::API_URL.'/files/{fileid}') )
+                 );
+        }
+        throw new \Exception('not logged');
     }
     private function getBookFolder()
     {

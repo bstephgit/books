@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Transaction;
+namespace Database\Transactions;
 
 include_once "db.php";
 include_once "Log.php";
@@ -28,6 +28,14 @@ abstract class Transaction
             }
 		}
 	}
+    public function __get($property)
+    {
+        if($property!='committed' && array_key_exists($property,$this->properties))
+		{
+            return $this->properties[$property];
+        }
+        return null;
+    }
 	public function commit()
 	{
 		if(!$this->committed)
@@ -46,10 +54,10 @@ abstract class Transaction
 	}
 	abstract protected function exec_commit();
 	abstract protected function exec_rollback();
-    protected function create_prop($name,$value)
-    {
-        $this->properties[$name]=$value;
-    }
+  protected function create_prop($name,$value)
+  {
+      $this->properties[$name]=$value;
+  }
 }
 
 class CreateBook extends Transaction
@@ -57,13 +65,13 @@ class CreateBook extends Transaction
     public function __construct()
     {
         parent::__construct();
-        $this->create_prop('file_name',null);
+        $this->create_prop('filename',null);
+        $this->create_prop('bookid',null);
         $this->create_prop('hash',null);
         $this->create_prop('size',null);
         $this->create_prop('descr',null);
         $this->create_prop('year',null);
         $this->create_prop('title',null);
-        $this->create_prop('name',null);
         $this->create_prop('author',null);
         $this->create_prop('img',null);
         $this->create_prop('vendor',null);
@@ -71,7 +79,7 @@ class CreateBook extends Transaction
         $this->create_prop('file_id',null);
         $this->create_prop('file_size',null);
     }
-    public function exec_commit()
+    protected function exec_commit()
     {
         $dbase = \Database\odbc()->connect();
         if($dbase)
@@ -87,17 +95,19 @@ class CreateBook extends Transaction
             $file_id=$this->file_id;
             $file_size=$this->file_size;
             $vendor=$this->vendor;
+            $filename=$this->filename;
 
-            $res=$dbase->query("INSERT INTO BOOKS (TITLE,DESCR,AUTHORS,SIZE,YEAR,HASH,IMG_PATH) VALUES('$title','$descr','$author',$size,'$year','$hash','$img')");
+            $res=$dbase->query("INSERT INTO BOOKS (TITLE,DESCR,AUTHORS,SIZE,YEAR,HASH,IMG_PATH) VALUES ('$title','$descr','$author',$size,'$year','$hash','$img')");
             if(!$res)
             {
+                $dbase->close();
                 throw new \Exception('database error');
             }
             $id=$this->bookid = $res;
 
             foreach($this->subjects as $subject)
             {
-                $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($subject,$id)");
+                $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES ($subject,$id)");
             }
 
             $res=$dbase->query("SELECT ID FROM FILE_STORE WHERE VENDOR_CODE='$vendor'");
@@ -108,9 +118,10 @@ class CreateBook extends Transaction
             }
             else
             {
+                $dbase->close();
                 throw new \Exception('cannot get file store id.');
             }
-            $dbase->query("INSERT BOOKS_LINKS(BOOK_ID,STORE_ID,FILE_ID,FILE_SIZE) VALUES($id,$store_id,'$file_id',$file_size)");
+            $dbase->query("INSERT BOOKS_LINKS(BOOK_ID,STORE_ID,FILE_ID,FILE_SIZE,FILE_NAME) VALUES($id,$store_id,'$file_id',$file_size,'$filename')");
 
             $dbase->close();
         }
@@ -127,7 +138,7 @@ class DeleteBook extends Transaction
         parent::__construct();
         $this->create_prop('bookid',null);
     }
-    public function exec_commit()
+    protected function exec_commit()
     {
          $dbase = \Database\odbc()->connect();
          if($dbase)

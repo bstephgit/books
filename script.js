@@ -1,5 +1,4 @@
 
-
 function storeUplForm(form)
 {
     var subjects=[];
@@ -36,6 +35,7 @@ function Store(name)
 {
     console.log('create store');
     this.name = name;
+    this.store_info = null;
 }
 
 Store.prototype.login = function (callback)
@@ -56,43 +56,46 @@ Store.prototype.login = function (callback)
 
         if (request.status === 200)
         {
-            console.log('response:',request.response);
-
             try
             {
                 var obj = JSON.parse(request.response);
                 if(obj.redirect)
                 {
-                    window.open(obj.redirect, "", "width=750,height=420");
-                    var timerobj = setInterval(
-                        function ()
-                        {
+                    var popup = window.open(obj.redirect, "", "width=750,height=420");
+
+                    window.addEventListener("message", function(event) {
+
+														if(event.origin!==window.location.origin) 
+															throw new Error('message not same origin: ' + event.origin);
+														window.removeEventListener("message",this,false);
                             try
                             {
-                                var info = localStorage.getItem(self.name);
+                                var info = event.data;
                                 if(info!=null)
                                 {
-                                    clearInterval(timerobj);
-                                    callback(JSON.parse(info));
+                                    self.store_info = JSON.parse(info);
+                                    callback(self.store_info);
                                 }
+															else
+																throw new Error('login info in message is null');
                             }
                             catch (err)
                             {
-                                console.error(err);
-                                clearInterval(timerobj);
                                 callback(err);
                             }
                         }
-                        ,1500);
-                }
-                if(obj.access_token)
+												, false);
+                       
+								}
+                else if(obj.access_token)
                 {
-                    callback(obj);
+									self.store_info=obj;
+                  callback(obj);
                 }
             }
             catch (err)
             {
-                console.error(err);
+                //console.log('%o',err);
                 callback(err);
             }
         }
@@ -106,25 +109,164 @@ Store.prototype.login = function (callback)
     {
        return request;
     }
-};
+	}
 
 Store.prototype.isLogged = function () {
-    if(this.hasOwnProperty('access_token'))
+	
+    if(this.store_info)
     {
-        return this.access_token.length > 0;
+				console.log('%o',this.store_info);
+        return this.store_info.access_token.length > 0;
     }
     return false;
-};
+}
 
-Store.prototype.upload = function (file) {
-    if(!this.isLogged())
-    {
-        throw new Error('not logged to store');
-    }
-};
+Store.prototype.upload = function (file,callback) {
 
+  if(!this.isLogged())
+  {
+		throw new Error('not logged');
+	}
+
+	var req = new XMLHttpRequest();
+	req.upload.onprogress = function(e){
+		var percentComplete = (e.loaded / e.total)*100;
+		//console.log('%o',e,percentComplete);
+		document.getElementById('upl-in1').style.width = percentComplete + '%';
+	};
+	req.onload = function(){
+		callback(req.status,req.response);
+	};
+	req.onerror = function(e){
+		callback(e);
+
+	};
+	var book_folder=this.store_info.book_folder;
+	var token = this.store_info.access_token;
+	var upload_service = this.store_info.urls.upload;
+	var body = upload_service.body;
+	var method = upload_service.method;
+	var url = upload_service.url;
+
+	var replace_tab = { '{parentid}': book_folder, '{filename}': file.name, '{accesstoken}': token };
+	for(var key in replace_tab)
+	{
+		if(url.indexOf(key)>-1)
+		{
+			url = url.replace(key,encodeURI(replace_tab[key]));
+		}
+	}
+	
+	console.log('url:',method,url);
+	
+	var formData;
+	if(body==='{filecontent}')
+	{
+		formData=file;
+	}
+	else
+	{
+		formData=new FormData();
+	
+		for(var dataname in body)
+		{
+			if(body[dataname]==='{filecontent}')
+			{
+				formData.append(dataname, file);
+			}
+			else
+			{
+				var data;
+				if (body[dataname].data) data = body[dataname].data.toString();
+				else data = body[dataname].toString();
+				console.log(dataname,data);
+
+				for(key in replace_tab)
+				{
+					if(data.indexOf(key)>-1)
+					{
+						data = data.replace(key,replace_tab[key]);
+					}
+				}
+				var blob;
+				if(body[dataname].type) blob=new Blob([data] , { 'type' : body[dataname].type });
+				else blob=data;
+				formData.append(dataname, blob);
+				console.log(dataname,data);
+			}
+		}
+	}
+
+	req.open(method, url);
+		
+	if(upload_service.hasOwnProperty('headers')){
+		for(var i in upload_service.headers)
+		{
+			var parts = upload_service.headers[i].split(':');
+			for(key in replace_tab)
+			{
+				if(parts[1].indexOf(key)>-1)
+				{
+					parts[1]=parts[1].replace(key,replace_tab[key]);
+				}
+			}
+			
+			req.setRequestHeader(parts[0],parts[1]);
+			console.log('set header',parts[0],parts[1]);
+		}
+	}
+	
+	req.send(formData);
+	
+	this.getRequest = function(){
+		 return req;
+  }
+}; 
+
+Store.prototype.download = function(fileid,filename)
+{
+	console.log(this);
+	if(!this.isLogged()) throw new Error('not logged');
+	
+	var req = new XMLHttpRequest();
+	req.onload = function()
+	{
+		console.log(req.getAllResponseHeaders());
+		if(req.status<400)
+		{
+			var a = document.createElement('a');
+    	a.href = window.URL.createObjectURL(req.response); // xhr.response is a blob
+    	a.download = filename; // Set the file name.
+    	a.style.display = 'none';
+    	document.body.appendChild(a);
+    	a.click();
+		}
+		else
+		{
+			alert(req.response);
+		}
+	};
+	var download = this.store_info.urls.download;
+	var token = this.store_info.access_token;
+	
+	var url = download.url.replace('{fileid}',fileid).replace('{accesstoken}',token);
+	req.open( download.method, url );
+	if(download.headers)
+	{
+		for(var i in download.headers)
+		{
+			var parts = download.headers[i].split(':');
+			req.setRequestHeader(parts[0],parts[1].replace('{accesstoken}',token));
+		}
+	}
+	req.responseType = 'blob';
+	req.send();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
 function ChunkedUploader(file, options) {
-    if (!this instanceof ChunkedUploader) {
+    
+	if (!(this instanceof ChunkedUploader)) {
         return new ChunkedUploader(file, options);
     }
  
@@ -187,22 +329,7 @@ ChunkedUploader.prototype = {
             var data = new Blob([chunk]);
             formData.append("upfile", data, self.file.name);
             self.upload_request.send(formData);
-
-            console.log('http status code:', self.upload_request.status);
-            console.log('http response:', self.upload_request.responseText);
-            // TODO
-            // From the looks of things, jQuery expects a string or a map
-            // to be assigned to the "data" option. We'll have to use
-            // XMLHttpRequest object directly for now...
-            /*$.ajax(self.options.url, {
-            data: chunk,
-            type: 'PUT',
-            mimeType: 'application/octet-stream',
-            headers: (self.range_start !== 0) ? {
-            'Content-Range': ('bytes ' + self.range_start + '-' + self.range_end + '/' + self.file_size)
-            } : {},
-            success: self._onChunkComplete
-            });*/
+            
         }, 20);
     },
 
@@ -266,75 +393,170 @@ document.addEventListener("DOMContentLoaded", function() {
     {
         upload_form.onsubmit = onFormSubmit;
     }
-    
-    /**
-     * Loops through the selected files, displays their file name and size
-     * in the file list, and enables the submit button for uploading.
-     */
+
+     //* Loops through the selected files, displays their file name and size
+     //* in the file list, and enables the submit button for uploading.
+
     var uploader;
     function onFilesSelected(e) {
         document.getElementById('upl-in1').style.width = '0%';
         var file = e.target.files[0];
-        uploader = new ChunkedUploader(file);
+        //uploader = new ChunkedUploader(file);
         document.getElementById('fname').value=file.name;
-        document.getElementById('fsize').value=file.size;
+			  document.getElementById('fsize').value=file.size;
+			
+				//var thumbSize = 264;
+				//var canvas = document.getElementById("canvas");
+				var canvas = document.getElementById("preview");
+			/*
+				canvas.width = thumbSize;
+				canvas.height = thumbSize;
+				var c = canvas.getContext("2d");
+				var img = new Image();
+				img.onload = function(e) {
+						alert('img loaded');
+						c.drawImage(this, 0, 0, thumbSize, thumbSize);
+						document.getElementById("preview").src = canvas.toDataURL("image/png");
+				};
+				img.src = window.URL.createObjectURL(file);
+				*/
+				PDFJS.getDocument(window.URL.createObjectURL(file)).then(function(pdf) {
+					pdf.getPage(1).then(function(page) {
+						var scale = 1;
+						var viewport = page.getViewport(scale);
+
+
+						var context = canvas.getContext('2d');
+						//canvas.height = viewport.height;
+						//canvas.width = viewport.width;
+						scale = ( (canvas.height/viewport.height) + (canvas.width/viewport.width)  ) / 2;
+						viewport = page.getViewport(scale);
+						
+						var renderContext = {
+							canvasContext: context,
+							viewport: viewport
+						};
+						page.render(renderContext);
+					});
+				});
     }
- 
-    /**
-     * Loops through all known uploads and starts each upload
-     * process, preventing default form submission.
-     */
-    function onFormSubmit(e) {
+
+
+     // Loops through all known uploads and starts each upload
+     // process, preventing default form submission.
+
+	function onFormSubmit(e) {
+   
         var ok = true;
-        
-        /*if(ok && upload_form.file_upload.files.length==0)
+        if(ok && upload_form.file_upload.files.length===0)
         {
             alert('error: no file selected');
             ok = false;
         }
-        if (ok && upload_form.title.value.length==0)
+        if (ok && upload_form.title.value.length===0)
         {
             alert('error: no title');
             ok = false;
         }
-        if(ok && upload_form.author.value.length==0)
+        if(ok && upload_form.author.value.length===0)
         {
             alert('error: no author');
-            ok = false;
-        }*/
-        // Prevent default form submission
+        }
+        //e.preventDefault();
         e.preventDefault();
         
-        {
-            if(uploader)
-            {
-                var submit_btn = document.getElementById('submit_btn');
-                var store = new Store(upload_form.store.value);
-                uploader.store = store;
-                store.login(
-                    function(obj)
-                    {
-                        if (obj instanceof Error)
-                        {
-                            console.error(obj);
-                        }
-                        else
-                        {
-                            console.log('login callback %o', obj);
-                        }
-                    });
-                //uploader.start();        
-                //submit_btn.disabled = true;
-            }
-            else if(file_input)
-            {
-                alert('uploader is not defined');
-            }
-            else
-            {
-                upload_form.submit();
-            }
-        }
+				if(ok)
+				{
+
+						var submit_btn = document.getElementById('submit_btn');
+						var index=0;
+						for(; index < upload_form.store.length; index++)
+						{
+								if(upload_form.store[index].checked)
+								{
+									break;
+								}
+						}
+						var store = new Store(upload_form.store[index].value);
+						//uploader.store = store;
+						store.login(
+								function(obj)
+								{
+										if (obj instanceof Error)
+										{
+												console.error(obj);
+												alert(obj.toString());
+										}
+										else
+										{
+											store.store_info=obj;
+											console.log('login callback %o', obj);
+											store.upload(document.getElementById('file_upload').files[0],
+													function(){
+
+															if(arguments.length>1)
+															{
+																console.log(arguments[0],arguments[1]);
+																
+
+																submit_btn.disabled = false;
+																var status = arguments[0];
+																var response = JSON.parse( arguments[1] );
+																if(status < 400)
+																{
+																	var id;
+																	if(response.id)
+																	{
+																		id=response.id;
+																	}
+																	if(response.fileids)
+																	{
+																		id=response.fileids[0];
+																	}
+																	
+																	//add image
+																	var imgfile=document.getElementById('imgfile');
+																	if(imgfile)
+																	{
+																		var canvas = document.getElementById("preview");
+																		
+																		imgfile.value=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
+																	}
+																	document.getElementById('fileid').value=id;
+																	
+																	var charge=new FileReader();
+																	charge.readAsBinaryString(document.getElementById('file_upload').files[0]);
+		
+																	charge.onloadend = function(e){
+																			document.getElementById('hash').value=CryptoJS.MD5(charge.result).toString();
+																			upload_form.submit();
+																	}
+																}
+																else
+																{
+																	alert(response);
+																}
+															}
+															else
+															{
+																console.log(arguments[0]);
+																alert(arguments[0]);
+															}
+											});
+										}
+								});
+						//uploader.start();        
+						submit_btn.disabled = true;
+				}
+				/*else if(file_input)
+				{
+						alert('uploader is not defined');
+				}
+				else
+				{
+						upload_form.submit();
+				}*/
+	}
         
-    }
 });
+		

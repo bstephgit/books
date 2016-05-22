@@ -107,6 +107,10 @@ class PCloudDrive extends Drive\Client
                 throw new Exception("invalid 'Books' folder", 1);
             }
         }
+        else
+        {
+            throw new \Exception('not logged');
+        }
     }
     public function deleteFile()
     {
@@ -123,6 +127,10 @@ class PCloudDrive extends Drive\Client
                     );
                 $response=json_decode($this->curl_request($url,$options));
             }
+        }
+        else
+        {
+            throw new \Exception('not logged');
         }
     }
     public function downloadFile()
@@ -151,6 +159,10 @@ class PCloudDrive extends Drive\Client
                 $this->downloadToBrowser($tmpfile,$content);
             }
         }
+        else
+        {
+            throw new \Exception('not logged');
+        }
     }
     public function store_info()
     {
@@ -160,7 +172,13 @@ class PCloudDrive extends Drive\Client
         return (object) array(
             'access_token' => $this->getAccessToken(),
             'book_folder' => $book_folder->folderid,
-            'urls' => array('download' => $base_url. '/getfilelink?fileid=%s&forcedownload=1', 'upload' => $base_url . '/uploadfile', 'delete' => $base_url . '/deletefile?fileid=%s')
+            'urls' => array('download' =>array( 'method' => 'GET', 'url' => $base_url. '/getfilelink?fileid={fileid}&access_token={accesstoken}&forcedownload=1' ), 
+                            'upload' => array( 'method' => 'POST', 'url' => $base_url . '/uploadfile?access_token={accesstoken}',
+                                               'body' =>array ( 'filename' => '{filename}',
+                                                                'folderid' => '{parentid}',
+                                                                'nopartial' => 1,
+                                                                'data' => '{filecontent}' ) ),
+                            'delete' => array( 'method' => 'GET', 'url' => $base_url . '/deletefile?fileid={fileid}') )
             );
     }
     private function getBookFolder()

@@ -10,7 +10,7 @@ require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/One
 require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/Folder.php');
 
 define('CLIENT_ID','000000004018962B');
-define('REDIRECT_URL','http://' . $_SERVER['HTTP_HOST'] . '/books/ms_onedrive.php');
+define('REDIRECT_URL','https://' . $_SERVER['HTTP_HOST'] . '/books/ms_onedrive.php');
 define('CLIENT_SECRET','XZxVArudOBTAcEvWlO4zlE4bBXCkfm5P');
 define('MS_ONEDRIVE_','MSOD');
 
@@ -74,7 +74,7 @@ class MSOneDriveHelper extends Drive\Client
                     '&refresh_token=' . $this->token->refresh_token . '&grant_type=refresh_token';
             $response = $this->curl_post('https://login.live.com/oauth20_authorize.srf',$body,$options);
 
-            \Logs\logDebug(var_export($response));
+            \Logs\logDebug(var_export($response,true));
 
 
             $state = (object)array('redirect_uri' => null,
@@ -149,12 +149,16 @@ class MSOneDriveHelper extends Drive\Client
         if($this->isLogged())
         {
             $book_folder=$this->getBookFolder();
-            $base_url='https://apis.live.net/v5.0/';
+            $base_url='https://apis.live.net/v5.0';
 
             return (object) array(
                 'access_token' => $this->getAccessToken(),
                 'book_folder' => $book_folder->getId(),
-                'urls' => array('download' => $base_url, 'upload' => $base_url . '/drive/items/{parent-id}:/{filename}:/content', 'delete' => $base_url)
+                'urls' => array(
+                    'download' => array( 'method' => 'GET', 'url' => $base_url . '/{fileid}/content?access_token={accesstoken}' ), 
+                    'upload' => array(  'method' => 'POST', 'url' => $base_url . '/{parentid}/files?access_token={accesstoken}' , 'body' => array('file'=>'{filecontent}') ),
+                    'delete' => array('method' => 'DELETE', 'url' => $base_url . '/drive/items/{fileid}') 
+                    )
                 );
         }
         else

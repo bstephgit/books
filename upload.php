@@ -2,7 +2,7 @@
 
 include_once "dbTransactions.php";
 include_once "db.php";
-
+include_once "Log.php";
 
 session_start();
 
@@ -46,83 +46,12 @@ function pdfGetImage($pdf_name)
         {
             mkdir(img_dir($img_basename));
         }
-        $hf = fopen(temp_dir($pdf_name),'rb');
-        if($hf)
-        {
-            $count = 1;
-            
-            while(!feof($hf))
-            {
-                if(fread($hf,1)=='<')
-                {
-                    if(!feof($hf) && fread($hf,1)==='<')
-                    {
-                       $packet='';
-                       while(!feof($hf) && ($c=fread($hf,1))!='>')
-                       {
-                           $packet .= $c;
-                       }
-                       $packet=str_replace('\n','',$packet);
-                       $packet=str_replace('\r','',$packet);
-                       $key='';
-                       $headers=array();
-                       foreach (explode('/',$packet) as $item) {
-                           $pos = strpos($item,' ');
-                           if($pos)
-                           {
-                               $item[$pos]='/';
-                           }
-                           foreach(explode('/',$item) as $item2)
-                           {
-                              if(strlen($key)==0)
-                              {
-                                  $key=$item2;
-                              } 
-                              else 
-                              {
-                                  $headers[$key]=$item2;
-                                  $key='';
-                              }
-                           }
-                       }
-                       if(isset($headers['Subtype']) && $headers['Subtype']==='Image' && ($headers['Filter']==='DCTDecode' || $headers['Filter']==='JPXDecode')
-                            && $headers['ColorSpace']==='DeviceRGB' /*&& isset($headers[ImageName])*/)
-                       {
-                           $tag='stream';
-                           $tgi=0;
-                           
-                           while($tgi<strlen($tag))
-                           {
-                               $tgi=1;
-                               
-                                while(!feof($hf) && fread($hf,1)!=$tag[0])
-                                        ;
-                                while(!feof($hf) && $tgi<strlen($tag) && ($c=fread($hf,1))===$tag[$tgi++])
-                                        ;
-                           }
-                           if(!feof($hf)){ $c = fread($hf,1); }
-                           while(!feof($hf) && (ord($c)===10 || ord($c)===13))
-                           {
-                               $c=fread($hf,1);
-                           }
-                           if(!feof($hf))
-                           {
-                                $len = intval($headers['Length']);
-                                $img_content= $c . fread($hf,$len-1);
-                                $img_name=img_dir($img_basename.'/'.$img_basename . '_' . $count++ . '.jpeg');
-                                $hof = fopen($img_name,'wb');
-                                fwrite($hof,$img_content,$len);
-                                fclose($hof);
-                           }
-                       }
-                       
-                    }
-                    
-                }
-            }
-            fclose($hf);
-        }
         
+        if(isset($_POST['imgfile']))
+        {
+          $img_name = img_dir($img_basename).'/img.png';
+          file_put_contents($img_name,base64_decode($_POST['imgfile']));
+        }
     } 
     return $img_name;
 }
@@ -189,8 +118,9 @@ if(isset($_POST['action']) && $_POST['action']==='book_create')
     $dbt=new \Database\Transactions\CreateBook();
 
     $dbt->title=$_POST['title'];$dbt->author=$_POST['author'];$dbt->descr=$_POST['descr'];
-    $dbt->size=$_POST['file_size'];$dbt->year=$_POST['year'];
-    $dbt->hash=hash_file('md5',temp_dir($_POST['file_name']));
+    $dbt->file_size=$dbt->size=$_POST['file_size'];$dbt->year=$_POST['year'];
+    //$dbt->hash=hash_file('md5',temp_dir($_POST['file_name']));
+    $dbt->hash=$_POST['hash'];
     $img=pdfGetImage($_POST['file_name']);
 
     if(strlen($img)==0)
@@ -200,6 +130,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_create')
     $dbt->img=$img;
     $dbt->vendor=$_POST['store'];
     $dbt->filename=$_POST['file_name'];
+    $dbt->file_id=$_POST['fileid'];
 
     $dbase=\Database\odbc()->connect();
     if($dbase)
@@ -218,13 +149,16 @@ if(isset($_POST['action']) && $_POST['action']==='book_create')
         $dbase->close();
     }
 
-    \Database\storeTransaction($dbt);
+    //\Database\storeTransaction($dbt);
 
-    $drive_url=sprintf('drive_client.php?action=upload&store_code=%s&file_name=%s',$_POST['store'],urlencode($_POST['file_name']));
+    //$drive_url=sprintf('drive_client.php?action=upload&store_code=%s&file_name=%s',$_POST['store'],urlencode($_POST['file_name']));
 
-    header('Location: ' . $drive_url);
-
+    //header('Location: ' . $drive_url);    
+    $dbt->commit();
+    header('Location: home.php?bookid=' . $dbt->bookid);
 }
+
+
 if(isset($_GET['action']) && $_GET['action']==='book_delete')
 {
     $dbase = \Database\odbc()->connect();
@@ -263,7 +197,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     
     $res=$dbase->query("UPDATE BOOKS SET TITLE='$title',DESCR='$descr',AUTHORS='$author',YEAR='$year' WHERE ID=$id");
     
-    $sql_query="DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id";
+    $dbase->query("DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id");
     
     $res=$dbase->query('SELECT ID FROM IT_SUBJECT');
     while($res->next(true))
@@ -278,5 +212,47 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     }
     $dbase->close();
     header('Location: home.php?bookid='.$id);
+}
+
+if(isset($_GET['action']) && $_GET['action']==='download')
+{
+    if(isset($_GET['bookid']))
+    {
+        $dbase = \Database\odbc()->connect();
+        $bookid=$_GET['bookid'];
+        $sql="SELECT VENDOR_CODE FROM FILE_STORE WHERE ID IN (SELECT STORE_ID FROM BOOKS_LINKS WHERE BOOK_ID=$bookid)";
+        $rec=$dbase->query($sql);
+        if($rec && $rec->next())
+        {
+            $store=$rec->field_value('VENDOR_CODE');
+            $dbase->close();
+
+            $drive_url=sprintf('drive_client.php?action=download&book_id=%s&store_code=%s',$bookid,$store);
+            header('Location: ' . $drive_url);
+        }
+        else
+        {
+            $dbase->close();
+            $errid=\Logs\logErr('cannot get vendor code from database');
+            header('Location: home.php?errid=' . $errid);
+        }
+    }
+    else
+    {
+        header('Location: home.php');
+    }
+}
+
+if(isset($_GET['action']) && $_GET['action']==='login')
+{
+    if($_GET['store'])
+    {
+        $url = sprintf('drive_client.php?action=login&store_code=%s',$_GET['store']);
+        header('Location: '. $url);
+    }
+    else
+    {
+        echo 'error: store code missing';
+    }
 }
 ?>

@@ -2,7 +2,7 @@
     
 namespace Logs;
 
-include_once "db.h";
+include_once "db.php";
 
 class Entry
 {
@@ -41,12 +41,12 @@ function logBase($level,$msg)
 {
     $e = new Entry();
 
-    $bt=debug_backtrace()[2];
+    $bt=debug_backtrace()[1];
 
     $e->level=$level;
     $e->file=basename($bt['file']);
     $e->line=$bt['line'];
-    $function = $bt['function'];
+    $function = debug_backtrace()[2]['function'];
     if(isset($bt['class']))
     {
         $function = $bt['class'] . '::' . $function;

@@ -41,7 +41,7 @@ function print_subjects_tab($base)
             do {
                 $cols=0;
                 echo '<tr>';
-                while($rec->next() && $cols<5){
+                while($cols<5 && $rec->next()){
                     echo '<td><input type="checkbox" name="topic' . $rec->field_value('ID') . '">' . $rec->field_value('NAME') . '<td>';
                     $cols++;
                 }
@@ -78,7 +78,8 @@ function print_book($rec,$subjects,$links)
         {
            $size=$links->field_value('FILE_SIZE');
            $vendor=$links->field_value('VENDOR');
-           echo sprintf("<div class='book'><a class='nav_element' href='upload.php?action=download&bookid=%s'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
+           echo sprintf("<div class='book'><a class='nav_element' onclick='downloadFile(%s);'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
+           //echo sprintf("<div class='book'><a class='nav_element' href='upload.php?action=download&bookid=%s'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
         }
         echo '</td>';
         echo '<td><div class="book"><ul class="book_tags"><LH>Tags</LH>';
@@ -96,6 +97,37 @@ function print_book($rec,$subjects,$links)
     
     <link type="text/css" rel="stylesheet" href="books.css"/>
     <script type='text/javascript' src='script.js'></script>
+    <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core.js'></script>
+    <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/md5-min.js'></script>
+    <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
+    <script type='text/javascript'>
+          function file_info(bookid,callback)
+          {
+            var xhr = new XMLHttpRequest();
+            xhr.onload = function()
+            {
+              //console.log('finfo',xhr.response);
+              callback(xhr.status,JSON.parse(xhr.response));
+            }
+            xhr.open('GET','store.php?bookid='+bookid);
+            xhr.send();
+          }
+          function downloadFile(bookid)
+          {
+            function cb(status,response)
+            {
+              if(status<400)
+              {
+                  var store = new Store(response.vendor_code);
+                  store.login(function(obj){
+                      store.download(response.fileid,response.filename);
+                  });
+              }
+              else alert(response.error);
+            }
+            file_info(bookid,cb);
+          }
+    </script>
 </head>
 <body>
 <div class="container">
@@ -195,23 +227,38 @@ function print_book($rec,$subjects,$links)
                     <td>Auteur<br> <input type="text" name="author"> </td>
                     <td>Ann&eacute;e de parution<br> <input type="text" name="year"></td></tr> 
                     <tr><td colspan="3">Description<br><textarea rows="5" cols="90" name="descr"></textarea></td></tr>
+                   
                 </table>
                 <?php if($upload){ ?>
-                <input type='hidden' name='file_name' id='fname'>
-                <input type='hidden' name='file_size' id='fsize'>
-                <input type='hidden' name='action' value='book_create'>
+                  <div id="hidden_fields">
+                    <input type='hidden' name='file_name' id='fname'>
+                    <input type='hidden' name='file_size' id='fsize'>
+                    <input type='hidden' name='action' value='book_create'>                
+                    <input type='hidden' name='fileid' id='fileid'>                
+                    <input type='hidden' name='hash' id='hash'>
+                    <input type='hidden' name='imgfile' id='imgfile'>
+                  </div>
+
                 <?php } if($edit){ ?>
                     <input type='hidden' name='action' value='book_update'>
                     <input type='hidden' name='bookid' value=''>
                 <?php } if($upload){ ?>
-                <div class="nav_elements">
-                        <p>Store<br>
-                        <input type="radio" name="store" value="GOOG" checked> Google drive<br>
-                        <input type="radio" name="store" value="MSOD"> MS OneDrive<br>
-                        <input type="radio" name="store" value="AMZN"> Amazon<br>
-                        <input type="radio" name="store" value="BOX"> Box.com<br>
-                        <input type="radio" name="store" value="PCLD"> pCloud  </p>
-                    </div>
+                
+                    <table class="nav_element">
+                      <tr>
+                        <td>
+                          <div class="nav_elements">
+                            <p>Store<br>
+                            <input type="radio" name="store" value="GOOG" checked> Google drive<br>
+                            <input type="radio" name="store" value="MSOD"> MS OneDrive<br>
+                            <input type="radio" name="store" value="AMZN"> Amazon<br>
+                            <input type="radio" name="store" value="BOX"> Box.com<br>
+                            <input type="radio" name="store" value="PCLD"> pCloud  </p>
+                          </div>
+                       </td>
+                        <td width='500' align='right'><canvas id="preview" width="250" height="280" style="border:1px solid #000000;"></canvas></td>
+                   </tr>
+                 </table>
                 <?php } ?>
                 <div class="nav_elements">
                     <?php  if($base){ print_subjects_tab($base); $base->close();}?>
@@ -260,10 +307,28 @@ function print_book($rec,$subjects,$links)
                     } 
              ?>
              <?php 
-                if(count($_GET)==0)
+                if(count($_GET)==0 || isset($_GET['page']))
                 {
+                   
+                   $page=1;
+                   $nb_elem=6;
+                   if(isset($_GET['page']))
+                   {
+                     $page=intval($_GET['page']);
+                   }
+                   $offset=(($page-1)*$nb_elem);
+                   $index_max=$page*$nb_elem;
+                  
                    $dbase = Database\odbc()->connect();
-                   $sql='SELECT ID,TITLE,IMG_PATH FROM BOOKS';
+                   $rec=$dbase->query('SELECT COUNT(*) FROM BOOKS');
+                   $rec->next(true);
+                   $count=$rec->field_value(0);
+                   
+                   $page_max=intval(ceil($count/$nb_elem));
+                   $page=min($page,$page_max);
+                  
+                   $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS ORDER BY ID LIMIT $nb_elem OFFSET $offset";
+                   
                    $rec=$dbase->query($sql);
                    if($rec)
                    {
@@ -276,10 +341,41 @@ function print_book($rec,$subjects,$links)
                        echo '</div>';
                    }
                    $dbase->close();
-                    
+                   if($page>1)
+                   {
+                     $prev=$page-1;
+                     echo "<a href='home.php?page=$prev'>previous</a>";
+                   }
+                   if($page<$page_max)
+                   {
+                     if($page>1) echo '|';
+                     $next=$page+1;
+                     echo "<a href='home.php?page=$next'>next</a>";
+                   }
                 }
              ?>
-            
+            <?php
+                if($_GET['errid'])
+                {
+                    $dbase = Database\odbc()->connect();
+                    if($dbase)
+                    {
+                        $errid=$_GET['errid'];
+                        $rec=$dbase->query("SELECT * FROM LOGS WHERE ID=$errid");
+                        if($rec && $rec->next())
+                        {
+                            $file=$rec->field_value('FILE');
+                            $line=$rec->field_value('LINE');
+                            $func=$rec->field_value('FUNCTION');
+                            $msg=$rec->field_value('MSG');
+                            echo "<h2>ERR: $msg</h2><br>";
+                            echo "<h3>FILE: $file</h3><br><h3>FUNCTION: $func</h3><br> <h3>LINE: $line</h3>";
+                        }
+                        $dbase->close();
+                    }
+                    var_dump($_SESSION);
+                }
+            ?>
         </div>
     </div>
 </div>

@@ -8,7 +8,7 @@ class DB
     
     public function __construct()
     {
-        $connexion=NULL;
+        $this->connexion=NULL;
     }
     public function __destruct() 
     {
@@ -16,14 +16,14 @@ class DB
     }
     public function connect($server,$username,$password,$db_name)
     {
-		$this->close();
-        $this->connexion = @mysqli_connect( $server, $username, $password, $db_name);
+			$this->close();
+      $this->connexion = @mysqli_connect( $server, $username, $password, $db_name);
 	    if(mysqli_connect_errno())
-        {
+      {
 	        $this->connexion = NULL;
 	    }
 	    return $this->connexion;
-	}
+		}
     public function close()
     {
         if($this->connexion)

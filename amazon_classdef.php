@@ -99,7 +99,11 @@ class AmazonCloudHelper extends Drive\Client
             return (object)array(
                 'access_token' => $this->getAccessToken(),
                 'book_folder' => $book_folder->id,
-                'urls' => array('download' => $content_url, 'upload' => $content_url, 'delete' => $metadata_url)
+                'urls' => array(
+                        'download' => array( 'method' => 'GET', 'url' => $content_url . '/nodes/{fileid}', 'headers' => array('Authorization: Bearer {accesstoken}')), 
+                        'upload' => array( 'method' => 'POST', 'url' => $content_url . '/nodes', 'headers' => array('Authorization: Bearer {accesstoken}'),
+                                            'body' => array( 'metadata' => '{"name":"{filename}","kind":"FILE","parents":["{parentid}"]}', 'content' => '{filecontent}' )),
+                        'delete' => array( 'method' => 'DELETE', 'url' => $metadata_url . '/nodes/{parentid}/children/{fileid}' ) )
                 );
         }
         else
