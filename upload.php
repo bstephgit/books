@@ -150,12 +150,19 @@ if(isset($_POST['action']) && $_POST['action']==='book_create')
     }
 
     //\Database\storeTransaction($dbt);
-
     //$drive_url=sprintf('drive_client.php?action=upload&store_code=%s&file_name=%s',$_POST['store'],urlencode($_POST['file_name']));
-
-    //header('Location: ' . $drive_url);    
+    //header('Location: ' . $drive_url);
+  try
+  {
+    \Logs\logDebug('commit transaction');
     $dbt->commit();
     header('Location: home.php?bookid=' . $dbt->bookid);
+  }
+  catch(\Exception $e)
+  {
+    $errid=\Logs\logException($e);
+    header('Location: home.php?errid=' . $errid);
+  }
 }
 
 
@@ -174,11 +181,22 @@ if(isset($_GET['action']) && $_GET['action']==='book_delete')
         $vendor=$rec->field_value('VENDOR_CODE');
     }
 
+    $sql_query="SELECT IMG_PATH FROM BOOKS WHERE ID=$id";
+    $rec=$dbase->query($sql_query);
+    if($rec->next())
+    {
+      $img_path=$rec->field_value('IMG_PATH');
+      if($img_path!==img_dir('book250x250.png'))
+      {
+        unlink($img_path);
+        rmdir(dirname($img_path));
+      }
+    }
     $dbase->close();
     if($vendor)
     {
         \Database\storeTransaction($dbt);
-        $drive_url=sprintf('drive_client.php?action=delete&store_code=%s&book_id=%s',$vendor,$id);
+        $drive_url=sprintf('drive_client.php?action=delete&store_code=%s&bookid=%s',$vendor,$id);
         header('Location: ' . $drive_url);
     }
     else
@@ -227,7 +245,7 @@ if(isset($_GET['action']) && $_GET['action']==='download')
             $store=$rec->field_value('VENDOR_CODE');
             $dbase->close();
 
-            $drive_url=sprintf('drive_client.php?action=download&book_id=%s&store_code=%s',$bookid,$store);
+            $drive_url=sprintf('drive_client.php?action=download&bookid=%s&store_code=%s',$bookid,$store);
             header('Location: ' . $drive_url);
         }
         else

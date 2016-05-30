@@ -87,8 +87,9 @@ function print_book($rec,$subjects,$links)
         {
             printf('<li>%s</li>',$subjects->field_value('NAME'));
         }
-        echo "</ul></div></td>";
-        echo "</tr></table></div>";
+        echo "</ul></div></td></tr>";
+        echo "<tr><td>&nbsp;</td><td colspan='2'><div class='upload-out' id='upload-out' style='visibility: hidden; margin-left: 1cm'><div class='upload-in' id='upl-in1'><div></div></td></tr>";
+        echo "</table></div>";
     }
 }
 ?>
@@ -101,31 +102,24 @@ function print_book($rec,$subjects,$links)
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/md5-min.js'></script>
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
     <script type='text/javascript'>
-          function file_info(bookid,callback)
-          {
-            var xhr = new XMLHttpRequest();
-            xhr.onload = function()
-            {
-              //console.log('finfo',xhr.response);
-              callback(xhr.status,JSON.parse(xhr.response));
-            }
-            xhr.open('GET','store.php?bookid='+bookid);
-            xhr.send();
-          }
+          
           function downloadFile(bookid)
           {
-            function cb(status,response)
+            var store = new Store('store.php?action=downloadLink&bookid='+bookid);
+
+            store.login(function (obj)
             {
-              if(status<400)
+              if (obj instanceof Error)
               {
-                  var store = new Store(response.vendor_code);
-                  store.login(function(obj){
-                      store.download(response.fileid,response.filename);
-                  });
+                  var msg=obj.toString();
+                  console.error(msg);
+                  alert(msg);
               }
-              else alert(response.error);
-            }
-            file_info(bookid,cb);
+              else
+              {
+                  store.download();
+              }
+            });
           }
     </script>
 </head>
@@ -335,8 +329,13 @@ function print_book($rec,$subjects,$links)
                        echo '<div class="nav_elements">';
                        while($rec->next())
                        {
-                           printf('<table class="book_list"><tr><td><img src="%s" class="book"></td></tr><tr><td><a class="nav_element" href="home.php?bookid=%s">%s</a></td></tr></table>',
-                            $rec->field_value('IMG_PATH'),$rec->field_value('ID'),$rec->field_value('TITLE'));
+                         $title=$rec->field_value('TITLE');
+                         if(strlen($title)>25)
+                         {
+                           $title= sprintf('<abbr title="%s">%s</abbr>...',$title,substr($title,0,25));
+                         }
+                         printf('<table class="book_list"><tr><td><img src="%s" class="book"></td></tr><tr><td><a class="nav_element" href="home.php?bookid=%s">%s</a></td></tr></table>',
+                            $rec->field_value('IMG_PATH'),$rec->field_value('ID'),$title);
                        }
                        echo '</div>';
                    }
@@ -373,7 +372,6 @@ function print_book($rec,$subjects,$links)
                         }
                         $dbase->close();
                     }
-                    var_dump($_SESSION);
                 }
             ?>
         </div>

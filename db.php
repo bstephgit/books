@@ -37,7 +37,8 @@ class DB
     {
         if($this->connexion)
         {
-            $response=mysqli_query($this->connexion,$sql_query);
+						$con=$this->connexion;
+						$response=mysqli_query($con,$sql_query);
             if($response)
             {
                 if(is_bool($response))
@@ -51,12 +52,16 @@ class DB
                 return new Record($response);
             }
         }
-        return NULL;
+        return new Record(NULL);
     }
     public function is_connected()
     {
         return $this->connexion!=NULL;
     }
+		public function con()
+		{
+			return $this->connexion;
+		}
 }
 
 class Record
@@ -71,6 +76,8 @@ class Record
     
     public function next($row=false)
     {
+			if($this->response)
+			{
         if(!$row)
         {
            $this->current_row=mysqli_fetch_assoc($this->response);
@@ -79,7 +86,8 @@ class Record
         {
            $this->current_row=mysqli_fetch_row($this->response);
         }
-        return $this->current_row;
+			}
+      return $this->current_row;
     }
     public function is_valid()
     {

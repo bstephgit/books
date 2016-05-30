@@ -53,7 +53,7 @@ if(count($_POST)>0)
 
     <form id="log_form" action="logview.php" method="POST">
         <input type="submit" value="delete" />
-
+				<button onclick='window.location.reload();'> refresh	</button>
         <table style="table-layout:fixed;width:100%">
              <thead>
                 <tr>
@@ -106,6 +106,7 @@ if(count($_POST)>0)
             </tbody>
         </table>
         <input type="submit" value="delete"/>
+			<button onclick='window.location.reload();'> refresh</button>
     </form>
     <input type="checkbox" id="chbot" onchange="selectall(this)" /> Select All
 </body>

@@ -111,7 +111,20 @@ class AmazonCloudHelper extends Drive\Client
             throw new \Exception('not logged');
         }
     }
-
+		public function downloadLink($fileid)
+		{
+			if($this->isLogged())
+			{
+				$this->getEndPoint();
+				$root_url=$this->getSessionVar('contentUrl');;
+				$access_token=$this->getAccessToken();
+				return array( 'method' => 'GET', 'url' =>  sprintf("%s/nodes/%s",$root_url,$fileid), 'headers' => array("Authorization: Bearer $access_token"));
+			}
+			else
+			{
+					throw new \Exception('not logged');
+			}
+		}
 	public function uploadFile()
 	{
         if($this->isLogged())

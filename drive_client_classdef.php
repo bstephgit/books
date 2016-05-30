@@ -32,9 +32,9 @@ abstract class Client
         {
             $_SESSION[$this->vendor_name]['action']=$_GET['action'];
         }
-        if(isset($_GET['book_id']))
+        if(isset($_GET['bookid']))
         {
-            $_SESSION[$this->vendor_name]['current_bookid']=$_GET['book_id'];
+            $_SESSION[$this->vendor_name]['current_bookid']=$_GET['bookid'];
         }
         if(isset($_GET['file_name']))
         {
@@ -72,7 +72,8 @@ abstract class Client
     protected abstract function onCode($code);
     protected abstract function refreshToken();
 
-    protected abstract function store_info();
+    protected abstract function store_info();    
+    protected abstract function downloadLink($fileid);
 
     public function execute()
     {
@@ -164,6 +165,9 @@ abstract class Client
             case 'login':
                 header('Location: store.php?action=login&store_code='. $this->getDriveVendorName().'&html=true');
                 break;
+            case 'downloadLink':
+                header('Location: store.php?action=downloadLink&bookid='. $this->getBookId().'&html=true');
+                break;
             default:
                 throw new \Exception('Unknown action: ' . $this->action);
         }
@@ -229,7 +233,11 @@ abstract class Client
     }
     private function initFromDb()
     {
-        $this->token=json_decode($this->loadLoginFromDb());
+      $data=$this->loadLoginFromDb();
+      if($data)
+      {
+        $this->token=json_decode($data);
+      }
     }
     protected function set_token($obj)
     {
@@ -287,6 +295,7 @@ abstract class Client
     }
     protected function loadLoginFromDb()
     {
+        $log_info=null;
         $dbase=\Database\odbc()->connect();
         if($dbase)
         {
@@ -295,12 +304,10 @@ abstract class Client
             if($rec->next())
             {
                 $log_info=$rec->field_value('LOGIN_INFO');
-                $dbase->close();
-
-                return $log_info;
             }
+            $dbase->close();
         }
-        return null;
+        return $log_info;
     }
     protected function saveLoginToDb($log_info=null)
     {

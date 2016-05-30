@@ -12,35 +12,35 @@ abstract class Transaction
 	protected function __construct()
 	{
 		$this->committed=false;
-        $this->properties=array();
+    $this->properties=array();
 	}
 	public function __set($property,$value)
 	{
 		if($property!='committed' && array_key_exists($property,$this->properties))
 		{
-            if(is_array($this->properties[$property]) && !is_array($value))
-            {
-                array_push($this->properties[$property],$value);
-            }
-            else
-            {
-                $this->properties[$property]=$value;
-            }
+			if(is_array($this->properties[$property]) && !is_array($value))
+			{
+					array_push($this->properties[$property],$value);
+			}
+			else
+			{
+					$this->properties[$property]=$value;
+			}
 		}
 	}
-    public function __get($property)
-    {
-        if($property!='committed' && array_key_exists($property,$this->properties))
-		{
-            return $this->properties[$property];
-        }
-        return null;
-    }
+	public function __get($property)
+	{
+			if($property!='committed' && array_key_exists($property,$this->properties))
+			{
+				return $this->properties[$property];
+			}
+			return null;
+	}
 	public function commit()
 	{
 		if(!$this->committed)
 		{
-            $this->exec_commit();
+      $this->exec_commit();
 			$this->committed=true;
 		}
 	}
@@ -48,7 +48,7 @@ abstract class Transaction
 	{
 		if($this->committed)
 		{
-            $this->exec_rollback();
+      $this->exec_rollback();
 			$this->committed=false;
 		}
 	}
@@ -84,24 +84,25 @@ class CreateBook extends Transaction
         $dbase = \Database\odbc()->connect();
         if($dbase)
         {
-            $title=$this->title;
-            $descr=$this->descr;
-            $author=$this->author;
+						$con = $dbase->con();
+            $title=mysqli_real_escape_string($con,$this->title);
+            $descr=mysqli_real_escape_string($con,$this->descr);
+            $author=mysqli_real_escape_string($con,$this->author);
             $size=$this->size;
             $year=$this->year;
-            $year=$this->year;
             $hash=$this->hash;
-            $img=$this->img;
+            $img=mysqli_real_escape_string($con,$this->img);
             $file_id=$this->file_id;
             $file_size=$this->file_size;
             $vendor=$this->vendor;
-            $filename=$this->filename;
-
-            $res=$dbase->query("INSERT INTO BOOKS (TITLE,DESCR,AUTHORS,SIZE,YEAR,HASH,IMG_PATH) VALUES ('$title','$descr','$author',$size,'$year','$hash','$img')");
+            $filename=mysqli_real_escape_string($con,$this->filename);
+						
+						$sql="INSERT INTO BOOKS (TITLE,DESCR,AUTHORS,SIZE,YEAR,HASH,IMG_PATH) VALUES ('$title','$descr','$author',$size,'$year','$hash','$img')";
+            $res=$dbase->query($sql);
             if(!$res)
             {
                 $dbase->close();
-                throw new \Exception('database error');
+                throw new \Exception('database error: '.$sql);
             }
             $id=$this->bookid = $res;
 

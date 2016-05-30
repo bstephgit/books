@@ -197,6 +197,19 @@ class BoxDrive extends Drive\Client
         }
         throw new \Exception('not logged');
     }
+		public function downloadLink($fileid)
+		{
+			if($this->isLogged())
+			{
+				$root_url=self::API_URL;
+				$access_token=$this->getAccessToken();
+				return array( 'method' => 'GET', 'url' =>  sprintf("%s/files/%s/content",$root_url,$fileid), 'headers' => array("Authorization: Bearer $access_token"));
+			}
+			else
+			{
+					throw new \Exception('not logged');
+			}
+		}
     private function getBookFolder()
     {
         $url = self::API_URL . '/folders/0/items';

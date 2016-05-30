@@ -181,6 +181,30 @@ class PCloudDrive extends Drive\Client
                             'delete' => array( 'method' => 'GET', 'url' => $base_url . '/deletefile?fileid={fileid}') )
             );
     }
+		
+		public function downloadLink($fileid)
+		{
+			if($this->isLogged())
+			{
+				$access_token=$this->getAccessToken();
+				$url = self::API_URL . '/getfilelink?fileid=' . $fileid . '&access_token=' . $access_token . '&forcedownload=1';
+				$download_url = $url;
+				/*$options=array(
+							 CURLOPT_HTTPHEADER => array(
+									 'Authorization: Bearer ' . $access_token
+							 )
+					 );
+
+				$download_url=json_decode($this->curl_request($url,$options));
+				$download_url= 'https://' . $download_url->hosts[0] . $download_url->path . '?access_token=' . $access_token; */
+				
+				return array( 'method' => 'GET', 'url' =>  $download_url );
+			}
+			else
+			{
+					throw new \Exception('not logged');
+			}
+		}
     private function getBookFolder()
     {
         $url = self::API_URL . '/listfolder?path=' . urlencode('/') . '&' . 'recursive=0' . '&' . 'nofiles=1';

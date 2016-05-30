@@ -148,3 +148,32 @@ table.book_list
     display: inline;
     margin : 20px 20px 20px 20px;
 }
+
+.error
+{
+    background-color: #e97368;
+    border: 1px solid red;
+}
+.warning
+{
+    background-color: gold;
+    border: 1px solid yellow;
+}
+
+.info
+{
+    background-color: #c3f8ed;
+    border: 1px solid blue;
+}
+
+.debug
+{
+    background-color: lightgray;
+    border: 2px solid #353434;
+    white-space: nowrap;
+}
+
+.fixed_width_450
+{
+    width=450px;
+}

@@ -20,8 +20,9 @@ class MSOneDriveHelper extends Drive\Client
 
 	public function __construct()
 	{
-        parent::__construct();
-        $option=null;
+		parent::__construct();
+		\Logs\logDebug(var_export($this,true));
+		$option=null;
 		if($this->getSessionVar('onedrive.client.state'))
 		{
 			$option = array('client_id' => CLIENT_ID,'state' => $this->getSessionVar('onedrive.client.state'));
@@ -31,11 +32,11 @@ class MSOneDriveHelper extends Drive\Client
 		{
 			$option = array('client_id' => CLIENT_ID);
 		}
-        if($this->token)
-        {
-            $option['state'] = (object) array( 'token' => (object) array( 'obtained' => $this->token->created , 'data' => $this->token) );
-        }
-        \Logs\logDebug(var_export($option,true));
+		if($this->token)
+		{
+				$option['state'] = (object) array( 'token' => (object) array( 'obtained' => $this->token->created , 'data' => $this->token) );
+		}
+		\Logs\logDebug(var_export($this,true));
 
 		$this->client = new \Krizalys\Onedrive\Client($option);
 	}
@@ -70,8 +71,9 @@ class MSOneDriveHelper extends Drive\Client
         if($this->token && $this->token->refresh_token)
         {
             $options=array( CURLOPT_HTTPHEADER => array( 'Content-Type: application/x-www-form-urlencoded') );
-            $body = 'client_id=' . CLIENT_ID . ' &redirect_uri=' . REDIRECT_URL . '&client_secret=' . CLIENT_SECRET .
+            $body = 'client_id=' . CLIENT_ID . '&redirect_uri=' . REDIRECT_URL . '&client_secret=' . CLIENT_SECRET .
                     '&refresh_token=' . $this->token->refresh_token . '&grant_type=refresh_token';
+						\Logs\logDebug($body);
             $response = $this->curl_post('https://login.live.com/oauth20_authorize.srf',$body,$options);
 
             \Logs\logDebug(var_export($response,true));
@@ -166,6 +168,19 @@ class MSOneDriveHelper extends Drive\Client
             throw new \Exception('not logged');
         }
     }
+		public function downloadLink($fileid)
+		{
+			if($this->isLogged())
+			{
+				$root_url='https://apis.live.net/v5.0';
+				$access_token=$this->getAccessToken();
+				return array( 'method' => 'GET', 'url' =>  sprintf("%s/%s/content?access_token=%s",$root_url,$fileid,$access_token));
+			}
+			else
+			{
+					throw new \Exception('not logged');
+			}
+		}
     private function getBookFolder()
     {
         $public_docs=$this->client->fetchDocs();

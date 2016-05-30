@@ -31,10 +31,9 @@ function storeUplForm(form)
     localStorage.setItem('upload', JSON.stringify(obj));
 }
 
-function Store(name)
+function Store(url)
 {
-    console.log('create store');
-    this.name = name;
+    this.url = url;
     this.store_info = null;
 }
 
@@ -42,7 +41,7 @@ Store.prototype.login = function (callback)
 {
     var self = this;
     var request = new XMLHttpRequest();
-    var url = '/books/store.php?action=login&store_code=' + self.name;
+    var url = self.url;
 
 
     request.onerror = function (e) {
@@ -58,6 +57,7 @@ Store.prototype.login = function (callback)
         {
             try
             {
+								console.log(request.response);
                 var obj = JSON.parse(request.response);
                 if(obj.redirect)
                 {
@@ -81,7 +81,8 @@ Store.prototype.login = function (callback)
                             }
                             catch (err)
                             {
-                                callback(err);
+															console.error(request.response);
+                              callback(err);
                             }
                         }
 												, false);
@@ -92,11 +93,16 @@ Store.prototype.login = function (callback)
 									self.store_info=obj;
                   callback(obj);
                 }
+								else
+								{
+									console.error(obj);
+									throw new Error('unexpected error');
+								}
             }
             catch (err)
             {
-                //console.log('%o',err);
-                callback(err);
+							console.error(request.response);
+              callback(err);
             }
         }
         else
@@ -223,15 +229,38 @@ Store.prototype.upload = function (file,callback) {
   }
 }; 
 
-Store.prototype.download = function(fileid,filename)
+Store.prototype.download = function()
 {
-	console.log(this);
 	if(!this.isLogged()) throw new Error('not logged');
 	
+	var filename=this.store_info.filename;
+	var filesize=this.store_info.filesize;
+	var vendor=this.store_info.vendor_code;
 	var req = new XMLHttpRequest();
-	req.onload = function()
+	var upload_bar = document.getElementById('upl-in1');
+	var token = this.store_info.access_token;
+
+	function updateProgress(e)
 	{
-		console.log(req.getAllResponseHeaders());
+		var percentComplete = 0;
+		if(e.total===0)
+		{
+			percentComplete = (e.loaded / e.total)*100;
+		}
+		else
+		{
+			percentComplete = (e.loaded /filesize)*100;
+		}
+		//console.log('%o',e);
+		upload_bar.style.width = percentComplete + '%';
+	}
+	
+	req.addEventListener("progress", updateProgress, false);
+	
+	function handler()
+	{
+		document.getElementById('upload-out').style.visibility = 'hidden';
+		
 		if(req.status<400)
 		{
 			var a = document.createElement('a');
@@ -243,24 +272,53 @@ Store.prototype.download = function(fileid,filename)
 		}
 		else
 		{
-			alert(req.response);
+			alert(req.response.toString());
 		}
-	};
-	var download = this.store_info.urls.download;
-	var token = this.store_info.access_token;
+	}
 	
-	var url = download.url.replace('{fileid}',fileid).replace('{accesstoken}',token);
+	if(vendor==='PCLD')
+	{
+		req.onload = function()
+		{
+			if(req.status<400)
+			{
+				console.log(req.response);
+				var download_url = JSON.parse(req.response);
+
+				if(download_url.error){	alert(download_url.error);	return; }
+				
+				window.open( 'https://' + download_url.hosts[0] + download_url.path );
+				
+			}
+			else	alert(req.responseText);
+		}
+	}
+	else
+	{
+		req.onload = handler;
+		req.responseType = 'blob';
+		upload_bar.style.width = '0%';
+		document.getElementById('upload-out').style.visibility = 'visible';
+	}
+	
+	var download = this.store_info.downloadLink;
+	
+	var url = download.url;
 	req.open( download.method, url );
+	
+	console.log('download url',url);
+	
 	if(download.headers)
 	{
 		for(var i in download.headers)
 		{
 			var parts = download.headers[i].split(':');
-			req.setRequestHeader(parts[0],parts[1].replace('{accesstoken}',token));
+			req.setRequestHeader(parts[0],parts[1]);
 		}
+		
 	}
-	req.responseType = 'blob';
 	req.send();
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -406,39 +464,30 @@ document.addEventListener("DOMContentLoaded", function() {
 			  document.getElementById('fsize').value=file.size;
 			
 				//var thumbSize = 264;
-				//var canvas = document.getElementById("canvas");
 				var canvas = document.getElementById("preview");
-			/*
-				canvas.width = thumbSize;
-				canvas.height = thumbSize;
-				var c = canvas.getContext("2d");
-				var img = new Image();
-				img.onload = function(e) {
-						alert('img loaded');
-						c.drawImage(this, 0, 0, thumbSize, thumbSize);
-						document.getElementById("preview").src = canvas.toDataURL("image/png");
-				};
-				img.src = window.URL.createObjectURL(file);
-				*/
-				PDFJS.getDocument(window.URL.createObjectURL(file)).then(function(pdf) {
-					pdf.getPage(1).then(function(page) {
-						var scale = 1;
-						var viewport = page.getViewport(scale);
+				//alert(file.type);
+				if(file.type==='application/pdf')
+				{
+					PDFJS.getDocument(window.URL.createObjectURL(file)).then(function(pdf) {
+						pdf.getPage(1).then(function(page) {
+							var scale = 1;
+							var viewport = page.getViewport(scale);
 
 
-						var context = canvas.getContext('2d');
-						//canvas.height = viewport.height;
-						//canvas.width = viewport.width;
-						scale = ( (canvas.height/viewport.height) + (canvas.width/viewport.width)  ) / 2;
-						viewport = page.getViewport(scale);
-						
-						var renderContext = {
-							canvasContext: context,
-							viewport: viewport
-						};
-						page.render(renderContext);
+							var context = canvas.getContext('2d');
+							scale = canvas.height / viewport.height;
+							canvas.width = scale * viewport.width;
+							viewport = page.getViewport(scale);
+
+							var renderContext = {
+								canvasContext: context,
+								viewport: viewport
+							};
+							page.render(renderContext);
+						});
 					});
-				});
+				}
+				
     }
 
 
@@ -477,29 +526,28 @@ document.addEventListener("DOMContentLoaded", function() {
 									break;
 								}
 						}
-						var store = new Store(upload_form.store[index].value);
+					
+						var store = new Store('/books/store.php?action=login&store_code='+upload_form.store[index].value);
 						//uploader.store = store;
 						store.login(
 								function(obj)
 								{
 										if (obj instanceof Error)
 										{
-												console.error(obj);
-												alert(obj.toString());
+											submit_btn.disabled = false;
+											console.error(obj);
+											alert(obj.toString());
 										}
 										else
 										{
-											store.store_info=obj;
-											console.log('login callback %o', obj);
-											store.upload(document.getElementById('file_upload').files[0],
+											var file=document.getElementById('file_upload').files[0];
+											store.upload(file,
 													function(){
-
+															submit_btn.disabled = false;
 															if(arguments.length>1)
 															{
 																console.log(arguments[0],arguments[1]);
 																
-
-																submit_btn.disabled = false;
 																var status = arguments[0];
 																var response = JSON.parse( arguments[1] );
 																if(status < 400)
@@ -516,11 +564,14 @@ document.addEventListener("DOMContentLoaded", function() {
 																	
 																	//add image
 																	var imgfile=document.getElementById('imgfile');
-																	if(imgfile)
+																	if(file.type==='application/pdf')
 																	{
 																		var canvas = document.getElementById("preview");
-																		
 																		imgfile.value=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
+																	}
+																	else
+																	{
+																		imgfile.value='';
 																	}
 																	document.getElementById('fileid').value=id;
 																	
@@ -534,13 +585,13 @@ document.addEventListener("DOMContentLoaded", function() {
 																}
 																else
 																{
-																	alert(response);
+																	alert(response.toString());
 																}
 															}
 															else
 															{
 																console.log(arguments[0]);
-																alert(arguments[0]);
+																alert(arguments[0].toString());
 															}
 											});
 										}

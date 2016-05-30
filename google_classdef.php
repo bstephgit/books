@@ -193,6 +193,12 @@ class GoogleDriveHelper extends Drive\Client
                     'delete' => array( 'method' => 'DELETE', 'url' => $root_url . '/files/{fileid}') )
             );
     }
+		public function downloadLink($fileid)
+		{
+			$root_url='https://www.googleapis.com/drive/v3';
+			$access_token=$this->getAccessToken();
+			return array( 'method' => 'GET', 'url' =>  sprintf("%s/files/%s?alt=media",$root_url,$fileid), 'headers' => array("Authorization: Bearer $access_token"));
+		}
     private function uploadSimple()
     {
 		if($this->google_drive_service && $this->google_drive_service->files)
