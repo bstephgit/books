@@ -40,11 +40,16 @@ function pdfGetImage($pdf_name)
 
     if( $pos!=false && ($pos+strlen($pdf_ext))==strlen($pdf_name) )
     {
-        $img_basename = basename($pdf_name,$pdf_ext);
-
+        $img_basename = '[' . basename($pdf_name,$pdf_ext) . ']';
+        
         if(!is_dir(img_dir($img_basename)))
         {
-            mkdir(img_dir($img_basename));
+            if(mkdir(img_dir($img_basename))===false)
+              throw new \Exception("cannot create directory");
+        }
+        else
+        {
+          \Logs\logWarning("dir '$img_basename' already created");
         }
         
         if(isset($_POST['imgfile']))
@@ -52,7 +57,16 @@ function pdfGetImage($pdf_name)
           $img_name = img_dir($img_basename).'/img.png';
           file_put_contents($img_name,base64_decode($_POST['imgfile']));
         }
-    } 
+        else
+        {
+          throw new \Exception('no post data for image');
+        }
+    }
+    else
+    {
+      \Logs\logInfo("'$pdf_name': not PDF file");
+    }
+    \Logs\logInfo("img='$img_name'");
     return $img_name;
 }
 
@@ -121,12 +135,18 @@ if(isset($_POST['action']) && $_POST['action']==='book_create')
     $dbt->file_size=$dbt->size=$_POST['file_size'];$dbt->year=$_POST['year'];
     //$dbt->hash=hash_file('md5',temp_dir($_POST['file_name']));
     $dbt->hash=$_POST['hash'];
-    $img=pdfGetImage($_POST['file_name']);
-
+    try{
+      $img=pdfGetImage($_POST['file_name']);
+    }catch(\Exception $e)
+    {
+      \Logs\logException($e);
+      $img=''; 
+    }
     if(strlen($img)==0)
     {
-        $img=img_dir('book250x250.png');
-    }
+      $img=img_dir('book250x250.png');
+    }  
+    
     $dbt->img=$img;
     $dbt->vendor=$_POST['store'];
     $dbt->filename=$_POST['file_name'];

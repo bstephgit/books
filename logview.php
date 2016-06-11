@@ -71,7 +71,7 @@ if(count($_POST)>0)
                 $dbase=\Database\odbc()->connect();
                 if($dbase)
                 {
-                    if($rec=$dbase->query('SELECT * FROM LOGS'))
+                    if($rec=$dbase->query('SELECT * FROM LOGS ORDER BY TIME'))
                     {
                         while($rec->next())
                         {
