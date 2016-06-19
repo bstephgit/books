@@ -52,7 +52,7 @@ function pdfGetImage($pdf_name)
           \Logs\logWarning("dir '$img_basename' already created");
         }
         
-        if(isset($_POST['imgfile']))
+        if(isset($_POST['imgfile']) && strlen($_POST['imgfile'])>0)
         {
           $img_name = img_dir($img_basename).'/img.png';
           file_put_contents($img_name,base64_decode($_POST['imgfile']));

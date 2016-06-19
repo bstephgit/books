@@ -1,23 +1,21 @@
+function recursiveProm(testf)
+{
+	
+	return new Promise(function(fulfill){
+		testf( function(done){
+			fulfill(done);	
+		} );
+		
+	}).then( function(done) { if(!done) recursiveProm(testf); } );
+}
 
 function storeUplForm(form)
 {
-    var subjects=[];
-    var index=1;
-    while(true)
-    {
-        var name='topic'+index;
-        if(form[name])
-        {
-            if(form[name].checked)
-            {
-                subjects.push(name);
-            }
-        }
-        else
-        {
-            break;
-        }
-        index++;
+    var subjects=[]; var index=1;
+    while(true) { 
+			var name='topic'+index; 
+			if(form[name]) { if (form[name].checked) subjects.push(name);  } else  break;
+			index++;
     }
     obj = {
         'title': form.title.value,
@@ -35,17 +33,31 @@ function Store(url)
 {
     this.url = url;
     this.store_info = null;
+		this.onerror = undefined;
+		this.onresponse = undefined;
+		this.onlongin = undefined;
 }
 
-Store.prototype.login = function (callback)
+Store.prototype.login = function ()
 {
     var self = this;
     var request = new XMLHttpRequest();
     var url = self.url;
-
-
+		
+		function doerror(err)
+		{
+				var callback = self.onerror;
+				if(callback) callback.call(self,err);
+		}
+		function doresponse(obj)
+		{
+				var callback = self.onlogin;
+				if(callback) callback.call(self,obj);
+		}
+	
     request.onerror = function (e) {
         console.log('erreur\n' + e);
+				doerror(e);
     };
 
     console.log('login url:',url);
@@ -74,7 +86,7 @@ Store.prototype.login = function (callback)
                                 if(info!=null)
                                 {
                                     self.store_info = JSON.parse(info);
-                                    callback(self.store_info);
+																		doresponse(self.store_info);
                                 }
 															else
 																throw new Error('login info in message is null');
@@ -82,7 +94,7 @@ Store.prototype.login = function (callback)
                             catch (err)
                             {
 															console.error(request.response);
-                              callback(err);
+															doerror(err);
                             }
                         }
 												, false);
@@ -91,7 +103,7 @@ Store.prototype.login = function (callback)
                 else if(obj.access_token)
                 {
 									self.store_info=obj;
-                  callback(obj);
+                  doresponse(obj);
                 }
 								else
 								{
@@ -102,12 +114,15 @@ Store.prototype.login = function (callback)
             catch (err)
             {
 							console.error(request.response);
-              callback(err);
+              doerror(err);
             }
         }
         else
         {
             console.log('request returned status',request.status,'text',request.statusText);
+						var err = new Error('status error');
+						err.status = request.status; err.response = request.statusText;
+						doerror(err);
         }
     };
     request.send();
@@ -127,13 +142,25 @@ Store.prototype.isLogged = function () {
     return false;
 }
 
-Store.prototype.upload = function (file,callback) {
+Store.prototype.upload = function (file) {
 
   if(!this.isLogged())
   {
 		throw new Error('not logged');
 	}
-
+	var self = this;
+	function doerror(err)
+	{
+			var callback = self.onerror;
+			if(callback) callback.call(self,err);
+	}
+	function doresponse()
+	{
+			var callback = self.onresponse;
+			var args = Array.from(arguments);
+			if(callback) callback.apply(self,args);
+	}
+	
 	var req = new XMLHttpRequest();
 	req.upload.onprogress = function(e){
 		var percentComplete = (e.loaded / e.total)*100;
@@ -141,11 +168,10 @@ Store.prototype.upload = function (file,callback) {
 		document.getElementById('upl-in1').style.width = percentComplete + '%';
 	};
 	req.onload = function(){
-		callback(req.status,req.response);
+		doresponse(req.status,req.response);
 	};
 	req.onerror = function(e){
-		callback(e);
-
+		doerror(e);
 	};
 	var book_folder=this.store_info.book_folder;
 	var token = this.store_info.access_token;
@@ -155,12 +181,9 @@ Store.prototype.upload = function (file,callback) {
 	var url = upload_service.url;
 
 	var replace_tab = { '{parentid}': book_folder, '{filename}': file.name, '{accesstoken}': token };
-	for(var key in replace_tab)
-	{
+	for(var key in replace_tab) {
 		if(url.indexOf(key)>-1)
-		{
 			url = url.replace(key,encodeURI(replace_tab[key]));
-		}
 	}
 	
 	console.log('url:',method,url);
@@ -189,8 +212,7 @@ Store.prototype.upload = function (file,callback) {
 
 				for(key in replace_tab)
 				{
-					if(data.indexOf(key)>-1)
-					{
+					if(data.indexOf(key)>-1) {
 						data = data.replace(key,replace_tab[key]);
 					}
 				}
@@ -239,23 +261,37 @@ Store.prototype.download = function()
 	var req = new XMLHttpRequest();
 	var upload_bar = document.getElementById('upl-in1');
 	var token = this.store_info.access_token;
-
-	function updateProgress(e)
+	var self=this;
+	
+	function doerror(err)
 	{
-		var percentComplete = 0;
-		if(e.total===0)
+		var callback=self.onerror;
+		if(callback) 
 		{
-			percentComplete = (e.loaded / e.total)*100;
+			if (typeof err !== "Error"){
+				var err_ = new Error("error downloading file");
+				
+				if(err.status!==undefined) { err_.status = err.status; err_.response=err.response; }
+				else err_.err=err;
+				
+				callback(err_);
+			}
+			else callback(err);
 		}
-		else
-		{
-			percentComplete = (e.loaded /filesize)*100;
-		}
-		//console.log('%o',e);
-		upload_bar.style.width = percentComplete + '%';
+		else console.error(err);
 	}
 	
-	req.addEventListener("progress", updateProgress, false);
+	function onprogress(e)
+	{
+		var total=0.0; 
+		if(e.total>0) { total = e.total; } else {  total = filesize; }
+		upload_bar.style.width = ((e.loaded / total)*100).toString() + "%";
+		
+		//console.log('%o',e, percent , e.loaded, e.total);
+	}
+	
+	req.addEventListener("progress", onprogress, false);
+	req.addEventListener("error",doerror,false);
 	
 	function handler()
 	{
@@ -272,7 +308,7 @@ Store.prototype.download = function()
 		}
 		else
 		{
-			alert(req.response.toString());
+			doerror(req);
 		}
 	}
 	
@@ -290,7 +326,7 @@ Store.prototype.download = function()
 				window.open( 'https://' + download_url.hosts[0] + download_url.path );
 				
 			}
-			else	alert(req.responseText);
+			else	doerror(req);
 		}
 	}
 	else
@@ -463,31 +499,86 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('fname').value=file.name;
 			  document.getElementById('fsize').value=file.size;
 			
-				//var thumbSize = 264;
-				var canvas = document.getElementById("preview");
-				//alert(file.type);
-				if(file.type==='application/pdf')
+			//var hash=CryptoJS.MD5(charge.result).toString();
+			
+			var promise = new Promise( function( success, fail ){
+					var charge=new FileReader();
+					charge.readAsBinaryString(document.getElementById('file_upload').files[0]);
+
+					charge.onerror = function(err){
+						fail(err);
+					};
+					charge.onloadend = function(e){
+						try{
+							
+							var hash=CryptoJS.algo.MD5.create();
+							var start = 0;
+							var pace = 10 * 1024 * 1024; //10 Mo
+							
+							recursiveProm( function(cb){
+									var end = Math.min( file.size, start+pace ) ;
+									var blob = file.slice( start, end );
+									
+									var readSlicer = new FileReader();
+          				readSlicer.readAsArrayBuffer(blob);
+																	
+									readSlicer.onloadend = function()
+									{
+										var ui8Chunk=new Uint8Array(readSlicer.result);
+										hash.update(CryptoJS.lib.WordArray.create(ui8Chunk));
+										start = end;
+
+										if (start >= file.size)
+										{
+											var md5res=hash.finalize().toString();
+											console.log('hash file MD5',md5res);
+											document.getElementById('hash').value=md5res;
+											cb(true) ;
+										}
+										else
+										{
+											cb(false);	
+										}
+									};
+									
+							} );
+														
+							success();
+						}catch(err){ fail(err); }
+					};
+				}).then(displayPreview,function(err){ alert(err.message); });
+		
+				function displayPreview()
 				{
-					PDFJS.getDocument(window.URL.createObjectURL(file)).then(function(pdf) {
-						pdf.getPage(1).then(function(page) {
-							var scale = 1;
-							var viewport = page.getViewport(scale);
+					//var thumbSize = 264;
+					var canvas = document.getElementById("preview");
+					//alert(file.type);
+					if(file.type==='application/pdf')
+					{
+						PDFJS.getDocument(window.URL.createObjectURL(file)).then(function(pdf) {
+							pdf.getPage(1).then(function(page) {
+								var scale = 1;
+								var viewport = page.getViewport(scale);
 
+								var context = canvas.getContext('2d');
+								scale = canvas.height / viewport.height;
+								canvas.width = scale * viewport.width;
+								viewport = page.getViewport(scale);
 
-							var context = canvas.getContext('2d');
-							scale = canvas.height / viewport.height;
-							canvas.width = scale * viewport.width;
-							viewport = page.getViewport(scale);
-
-							var renderContext = {
-								canvasContext: context,
-								viewport: viewport
-							};
-							page.render(renderContext);
+								var renderContext = {
+									canvasContext: context,
+									viewport: viewport
+								};
+								page.render(renderContext);
+								
+							});
 						});
-					});
+					}
+					else
+					{
+						imgfile.value='';
+					}
 				}
-				
     }
 
 
@@ -495,7 +586,36 @@ document.addEventListener("DOMContentLoaded", function() {
      // process, preventing default form submission.
 
 	function onFormSubmit(e) {
-   
+
+   			function doerror(err){
+					console.error(err);
+					alert(err.message);
+				}
+			
+				function submitForm()
+				{
+					console.log(arguments[0][0],arguments[0][1]);
+																
+					var status = arguments[0][0];
+					var response = JSON.parse( arguments[0][1] );
+					if(status < 400)
+					{
+						var id;
+						if(response.id) id=response.id;
+						if(response.fileids) id=response.fileids[0];
+
+						document.getElementById('fileid').value=id;
+						//add image
+						var canvas = document.getElementById("preview");
+						document.getElementById('imgfile').value=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
+								
+						upload_form.submit();
+					}
+					else
+					{
+						throw new Error(response.toString());
+					}	
+				}
         var ok = true;
         if(ok && upload_form.file_upload.files.length===0)
         {
@@ -518,95 +638,29 @@ document.addEventListener("DOMContentLoaded", function() {
 				{
 
 						var submit_btn = document.getElementById('submit_btn');
+						var file=document.getElementById('file_upload').files[0];
 						var index=0;
-						for(; index < upload_form.store.length; index++)
-						{
-								if(upload_form.store[index].checked)
-								{
-									break;
-								}
-						}
-					
+						for(; index < upload_form.store.length; index++) if(upload_form.store[index].checked) break;
+						
 						var store = new Store('/books/store.php?action=login&store_code='+upload_form.store[index].value);
+					
+						var promise = new Promise( function(fulfill,reject) {
+							store.onlogin = function(resp){ fulfill(resp); };
+							store.onerror = function(err){ submit_btn.disabled = false; reject(err); };	
+							store.login();
+						});
+						
+						store.onresponse = function(resp){ submit_btn.disabled = false; };
 						//uploader.store = store;
-						store.login(
-								function(obj)
-								{
-										if (obj instanceof Error)
-										{
-											submit_btn.disabled = false;
-											console.error(obj);
-											alert(obj.toString());
-										}
-										else
-										{
-											var file=document.getElementById('file_upload').files[0];
-											store.upload(file,
-													function(){
-															submit_btn.disabled = false;
-															if(arguments.length>1)
-															{
-																console.log(arguments[0],arguments[1]);
-																
-																var status = arguments[0];
-																var response = JSON.parse( arguments[1] );
-																if(status < 400)
-																{
-																	var id;
-																	if(response.id)
-																	{
-																		id=response.id;
-																	}
-																	if(response.fileids)
-																	{
-																		id=response.fileids[0];
-																	}
-																	
-																	//add image
-																	var imgfile=document.getElementById('imgfile');
-																	if(file.type==='application/pdf')
-																	{
-																		var canvas = document.getElementById("preview");
-																		imgfile.value=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
-																	}
-																	else
-																	{
-																		imgfile.value='';
-																	}
-																	document.getElementById('fileid').value=id;
-																	
-																	var charge=new FileReader();
-																	charge.readAsBinaryString(document.getElementById('file_upload').files[0]);
-		
-																	charge.onloadend = function(e){
-																			document.getElementById('hash').value=CryptoJS.MD5(charge.result).toString();
-																			upload_form.submit();
-																	}
-																}
-																else
-																{
-																	alert(response.toString());
-																}
-															}
-															else
-															{
-																console.log(arguments[0]);
-																alert(arguments[0].toString());
-															}
-											});
-										}
-								});
-						//uploader.start();        
+						promise.catch(doerror).then( function() { return new Promise(function(fulfill,reject) {  
+								store.onerror = function(err){ submit_btn.disabled = false; reject(err); };	
+								store.onresponse = function(status,resp)  { submit_btn.disabled = false; fulfill([status,resp]) };
+								store.upload(file);
+						} ); }).catch(doerror).then(submitForm).catch(doerror);
+
 						submit_btn.disabled = true;
 				}
-				/*else if(file_input)
-				{
-						alert('uploader is not defined');
-				}
-				else
-				{
-						upload_form.submit();
-				}*/
+				
 	}
         
 });

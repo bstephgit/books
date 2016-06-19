@@ -100,8 +100,8 @@ class AmazonCloudHelper extends Drive\Client
                 'access_token' => $this->getAccessToken(),
                 'book_folder' => $book_folder->id,
                 'urls' => array(
-                        'download' => array( 'method' => 'GET', 'url' => $content_url . '/nodes/{fileid}', 'headers' => array('Authorization: Bearer {accesstoken}')), 
-                        'upload' => array( 'method' => 'POST', 'url' => $content_url . '/nodes', 'headers' => array('Authorization: Bearer {accesstoken}'),
+                        'download' => array( 'method' => 'GET', 'url' => $content_url . 'nodes/{fileid}/content', 'headers' => array('Authorization: Bearer {accesstoken}')), 
+                        'upload' => array( 'method' => 'POST', 'url' => $content_url . '/nodes?suppress=1', 'headers' => array('Authorization: Bearer {accesstoken}'),
                                             'body' => array( 'metadata' => '{"name":"{filename}","kind":"FILE","parents":["{parentid}"]}', 'content' => '{filecontent}' )),
                         'delete' => array( 'method' => 'DELETE', 'url' => $metadata_url . '/nodes/{parentid}/children/{fileid}' ) )
                 );
@@ -118,7 +118,7 @@ class AmazonCloudHelper extends Drive\Client
 				$this->getEndPoint();
 				$root_url=$this->getSessionVar('contentUrl');;
 				$access_token=$this->getAccessToken();
-				return array( 'method' => 'GET', 'url' =>  sprintf("%s/nodes/%s",$root_url,$fileid), 'headers' => array("Authorization: Bearer $access_token"));
+				return array( 'method' => 'GET', 'url' =>  sprintf("%snodes/%s/content",$root_url,$fileid), 'headers' => array("Authorization: Bearer $access_token"));
 			}
 			else
 			{
@@ -249,10 +249,10 @@ class AmazonCloudHelper extends Drive\Client
     }
     private function getEndPoint()
     {
-        if($this->getSessionVar('contentUrl'))
+        /*if($this->getSessionVar('contentUrl'))
         {
             return;
-        }
+        }*/
         $url = self::API_URL . '/drive/v1/account/endpoint';
         
         $options = array(

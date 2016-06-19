@@ -121,9 +121,8 @@ function print_book($rec,$subjects,$links)
     
     <link type="text/css" rel="stylesheet" href="books.css"/>
     <script type='text/javascript' src='script.js'></script>
-    <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core.js'></script>
+    <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/md5-min.js'></script>
-    <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.3.0/js/md5.min.js'></script>
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
     <script type='text/javascript'>
           
@@ -132,9 +131,16 @@ function print_book($rec,$subjects,$links)
             var store = new Store('store.php?action=downloadLink&bookid='+bookid);
 
             store.onerror = function (err) {
+              console.error(err);
               var msg=err.toString();
-              console.error(msg);
-              alert(msg);
+              if(err.status){ 
+                var reader = new window.FileReader(); 
+                reader.readAsDataURL(err.response); reader.onloadend = function() 
+                {  var res = reader.result; msg = err.status + " " + atob(res.substr(res.indexOf(',')+1)); alert(msg); }
+              }else{
+                alert(msg);
+              }
+              
             };
             store.onlogin = function (obj) {
               store.download();
@@ -237,7 +243,7 @@ function print_book($rec,$subjects,$links)
                     <?php if ($upload) { ?>
                   <tr><td><input type="file" id="file_upload"></td><td colspan="2"><div class='upload-out'><div class='upload-in' id='upl-in1'></div></div></td></tr>
                     <?php } ?>
-                    <tr><td>Titre<br> <input type="text" name="title"> </td>
+                    <tr><td>Titre<br> <input type="text" name="title" size="40"> </td>
                     <td>Auteur<br> <input type="text" name="author"> </td>
                     <td>Ann&eacute;e de parution<br> <input type="text" name="year"></td></tr> 
                     <tr><td colspan="3">Description<br><textarea rows="5" cols="90" name="descr"></textarea></td></tr>

@@ -71,16 +71,16 @@ class MSOneDriveHelper extends Drive\Client
         if($this->token && $this->token->refresh_token)
         {
             $options=array( CURLOPT_HTTPHEADER => array( 'Content-Type: application/x-www-form-urlencoded') );
-            $body = 'client_id=' . CLIENT_ID . '&redirect_uri=' . REDIRECT_URL . '&client_secret=' . CLIENT_SECRET .
+            $body = 'client_id=' . CLIENT_ID . '&redirect_uri=' . urlencode(REDIRECT_URL) . '&client_secret=' . CLIENT_SECRET .
                     '&refresh_token=' . $this->token->refresh_token . '&grant_type=refresh_token';
 						\Logs\logDebug($body);
-            $response = $this->curl_post('https://login.live.com/oauth20_authorize.srf',$body,$options);
+            $response = $this->curl_post('https://login.live.com/oauth20_token.srf',$body,$options);
 
             \Logs\logDebug(var_export($response,true));
 
 
             $state = (object)array('redirect_uri' => null,
-                            'token'       => array( 'obtained' => time(), 'data' => json_decode($response) )
+                            'token'       => (object)array( 'obtained' => time(), 'data' => json_decode($response) )
                 );
             $option = array('client_id' => CLIENT_ID,'state' => $state );
             $this->client = new \Krizalys\Onedrive\Client($option);
