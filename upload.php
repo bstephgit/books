@@ -1,4 +1,4 @@
-33333<?php
+<?php
 
 include_once "dbTransactions.php";
 include_once "db.php";
