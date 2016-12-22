@@ -83,6 +83,7 @@ Store.prototype.login = function ()
                             try
                             {
                                 var info = event.data;
+																console.log('got message:',info);
                                 if(info!=null)
                                 {
                                     self.store_info = JSON.parse(info);
@@ -93,7 +94,7 @@ Store.prototype.login = function ()
                             }
                             catch (err)
                             {
-															console.error(request.response);
+															console.error(info);
 															doerror(err);
                             }
                         }
@@ -269,6 +270,7 @@ Store.prototype.download = function()
 		if(callback) 
 		{
 			if (typeof err !== "Error"){
+				console.error(req.response);
 				var err_ = new Error("error downloading file");
 				
 				if(err.status!==undefined) { err_.status = err.status; err_.response=err.response; }
@@ -323,7 +325,8 @@ Store.prototype.download = function()
 
 				if(download_url.error){	alert(download_url.error);	return; }
 				
-				window.open( 'https://' + download_url.hosts[0] + download_url.path );
+				//window.open( 'https://' + download_url.hosts[0] + download_url.path );
+				window.open( download_url.url );
 				
 			}
 			else	doerror(req);
@@ -340,7 +343,7 @@ Store.prototype.download = function()
 	var download = this.store_info.downloadLink;
 	
 	var url = download.url;
-	req.open( download.method, url );
+	req.open( download.method, url, true );
 	
 	console.log('download url',url);
 	
@@ -351,8 +354,7 @@ Store.prototype.download = function()
 			var parts = download.headers[i].split(':');
 			req.setRequestHeader(parts[0],parts[1]);
 		}
-		
-	}
+	}	
 	req.send();
 
 }
@@ -589,7 +591,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
    			function doerror(err){
 					console.error(err);
-					alert(err.message);
+					if(err.message)
+						alert("message:"+err.message);
+					else
+					{
+						var outputstr = '';
+						for(var prop in err)
+						{
+							outputstr = prop + ' : ' + err[prop] + '\n';
+						}
+						//alert(outputstr);
+					}
+						
 				}
 			
 				function submitForm()
@@ -613,7 +626,7 @@ document.addEventListener("DOMContentLoaded", function() {
 					}
 					else
 					{
-						throw new Error(response.toString());
+						throw new Error(JSON.stringify(response));
 					}	
 				}
         var ok = true;

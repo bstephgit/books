@@ -57,7 +57,7 @@ function print_subjects_tab($base)
 {
     if($base && $base->is_connected())
     {
-        $rec=$base->query('SELECT ID,NAME FROM IT_SUBJECT');
+        $rec=$base->query('SELECT ID,NAME FROM IT_SUBJECT ORDER BY NAME');
         echo '<table class="nav_element">';
         if($rec)
         {
@@ -88,7 +88,7 @@ function print_book($rec,$subjects,$links)
         $img_src=encodePath($rec->field_value('IMG_PATH'));
         echo "<div class='book_record'><table class='book_record'>";
         echo '<tr>';
-        printf("<td width='210px' rowspan='2'><img src=\"%s\" class='book'></td>",/*str_replace("'","\\'",*/$img_src/*)*/);
+        printf("<td width='210px' valign='top' rowspan='2'><img src=\"%s\" class='book'></td>",/*str_replace("'","\\'",*/$img_src/*)*/);
         printf("<td colspan='2'><div class='book'><span class='book_title'>%s</span></div></td>",$title);
         echo '</tr>';
         echo '<tr>';
@@ -101,7 +101,7 @@ function print_book($rec,$subjects,$links)
         {
            $size=$links->field_value('FILE_SIZE');
            $vendor=$links->field_value('VENDOR');
-           echo sprintf("<div class='book'><a class='nav_element' onclick='downloadFile(%s);'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
+           echo sprintf("<div class='book'><button class='nav_element' onclick='downloadFile(%s);'>Download</button> %s octets (%s)</div>",$_GET['bookid'],$size,$vendor);
            //echo sprintf("<div class='book'><a class='nav_element' href='upload.php?action=download&bookid=%s'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
         }
         echo '</td>';
@@ -183,7 +183,7 @@ function print_book($rec,$subjects,$links)
                 $base=Database\odbc()->connect();
                 if($base && $base->is_connected())
                 {
-                    $rec = $base->query('SELECT ID,NAME FROM IT_SUBJECT');
+                    $rec = $base->query('SELECT ID,NAME FROM IT_SUBJECT ORDER BY NAME');
                     if($rec)
                     {
                         $sep="";
@@ -290,13 +290,13 @@ function print_book($rec,$subjects,$links)
                 {
                     $script=sprintf(
                             "var upload_form = document.getElementById('form_upload');
-                            upload_form.title.value='%s';
-                            upload_form.author.value='%s';
-                            upload_form.year.value='%s';
-                            upload_form.descr.value='%s';
-                            upload_form.bookid.value='%s';
+                            upload_form.title.value=\"%s\";
+                            upload_form.author.value=\"%s\";
+                            upload_form.year.value=\"%s\";
+                            upload_form.descr.value=\"%s\";
+                            upload_form.bookid.value=\"%s\";
                             upload_form.submit_btn.value='update';", 
-                            $book['TITLE'], $book['AUTHORS'], $book['YEAR'], $book['DESCR'], $book['ID']);
+                            $book['TITLE'], $book['AUTHORS'], $book['YEAR'], str_replace("\r\n","<BR>",str_replace('\"','\\\"',$book['DESCR'])), $book['ID']);
                     
                     echo '<script type="text/javascript">';
                         echo $script;

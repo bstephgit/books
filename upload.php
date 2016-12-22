@@ -1,4 +1,4 @@
-<?php
+33333<?php
 
 include_once "dbTransactions.php";
 include_once "db.php";
@@ -229,9 +229,13 @@ if(isset($_GET['action']) && $_GET['action']==='book_delete')
 if(isset($_POST['action']) && $_POST['action']==='book_update')
 {
     $dbase = \Database\odbc()->connect();
-    
-    $title=$_POST['title'];$author=$_POST['author'];$pub=$_POST['pub'];$descr=$_POST['descr'];
-    $year=$_POST['year'];$id=$_POST['bookid'];
+    $con=$dbase->con();
+    $title=mysqli_real_escape_string($con,$_POST['title']);
+    $author=mysqli_real_escape_string($con,$_POST['author']);
+    $pub=$_POST['pub'];
+    $descr=mysqli_real_escape_string($con,$_POST['descr']);
+    $year=$_POST['year'];
+    $id=$_POST['bookid'];
     
     $res=$dbase->query("UPDATE BOOKS SET TITLE='$title',DESCR='$descr',AUTHORS='$author',YEAR='$year' WHERE ID=$id");
     
