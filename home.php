@@ -296,7 +296,7 @@ function print_book($rec,$subjects,$links)
                             upload_form.descr.value=\"%s\";
                             upload_form.bookid.value=\"%s\";
                             upload_form.submit_btn.value='update';", 
-                            $book['TITLE'], $book['AUTHORS'], $book['YEAR'], str_replace("\r\n","<BR>",str_replace('\"','\\\"',$book['DESCR'])), $book['ID']);
+                            $book['TITLE'], $book['AUTHORS'], $book['YEAR'], str_replace(array("\r\n",'"','\''),array("<BR>",'\\"','\\\''),$book['DESCR']), $book['ID']);
                     
                     echo '<script type="text/javascript">';
                         echo $script;
