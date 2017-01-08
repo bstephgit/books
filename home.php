@@ -126,27 +126,56 @@ function print_book($rec,$subjects,$links)
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
     <script type='text/javascript'>
           
-          function downloadFile(bookid)
-          {
-            var store = new Store('store.php?action=downloadLink&bookid='+bookid);
+      function downloadFile(bookid)
+      {
+        var store = new Store('store.php?action=downloadLink&bookid='+bookid);
 
-            store.onerror = function (err) {
-              console.error(err);
-              var msg=err.toString();
-              if(err.status){ 
-                var reader = new window.FileReader(); 
-                reader.readAsDataURL(err.response); reader.onloadend = function() 
-                {  var res = reader.result; msg = err.status + " " + atob(res.substr(res.indexOf(',')+1)); alert(msg); }
-              }else{
-                alert(msg);
-              }
-              
-            };
-            store.onlogin = function (obj) {
-              store.download();
-            };
-            store.login();
+        store.onerror = function (err) {
+          console.error(err);
+          var msg=err.toString();
+          if(err.status){ 
+            var reader = new window.FileReader(); 
+            reader.readAsDataURL(err.response); reader.onloadend = function() 
+            {  var res = reader.result; msg = err.status + " " + atob(res.substr(res.indexOf(',')+1)); alert(msg); }
+          }else{
+            alert(msg);
           }
+
+        };
+        store.onlogin = function (obj) {
+          store.download();
+        };
+        store.login();
+      }
+      function changepage(event)
+      {
+         var dochange = (event.type==='change') || (event.type==='keyup' && event.keyCode===13);
+         if(dochange)
+         {
+           var pagectrl = document.getElementById('nbpage');
+           var uobj = new URL(window.location.href);
+           var rx = /page=\d+/;
+           var url = uobj.protocol + '//' + uobj.hostname + uobj.pathname;
+           var pageindex = Math.min(pagectrl.value,pagectrl.max);
+           if(rx.test(uobj.search))
+           {
+              url = url + uobj.search.replace(rx,'page=' + pageindex);    
+           }
+           else
+           {
+              if(uobj.search.length===0)
+              {
+                url += '?'
+              }
+             else
+             {
+               url += uobj.search + '&';
+             }
+             url += 'page=' + pageindex;
+           }
+           window.location.href = url;
+         }
+      }
     </script>
 </head>
 <body>
@@ -390,6 +419,7 @@ function print_book($rec,$subjects,$links)
                        echo '</div>';
                    }
                    $dbase->close();
+                   $page=min($page,$page_max);
                    if($page>1)
                    {
                      $prev=$page-1;
@@ -398,9 +428,10 @@ function print_book($rec,$subjects,$links)
                      else
                         echo "<a href='home.php?page=$prev'>previous</a>";
                    }
+                   
+                   printf("<input type='number' id='nbpage' value='%s' min='1' max='%s' size=3 onchange='changepage(event)'>",$page,$page_max);
                    if($page<$page_max)
                    {
-                     if($page>1) echo '|';
                      $next=$page+1;
                      if($has_subject)
                        echo "<a href='home.php?page=$next&subject=$subject'>next</a>";
