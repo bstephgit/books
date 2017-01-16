@@ -28,24 +28,26 @@ class BoxDrive extends Drive\Client
 
     public function getRedirectUrl()
     {
-        $url= self::AUTH_URL . '?response_type=code' . '&' .
+        $url= self::AUTH_URL  . '?response_type=code' . '&' .
             'client_id=' . self::CLIENT_ID . '&' .
             'redirect_uri=' . self::REDIRECT_URI . '&' .
-            'state=' . urlencode($this->getFileName()) .  '&' .
+						'state=xyz'   . '&' .
             'box_login=' . urlencode('tcn75323@gmail.com');
+						\Logs\logDebug($url);
         return $url;
     }
     public function isExpired()
     {
         try
         {
-            if(!property_exists($this,'token')) throw new \Exception('token not found');
-            if(!property_exists($this->token,'expires_in')) throw new \Exception('expires_in not found');
-            if(!property_exists($this->token,'created')) throw new \Exception('created not found');
+            if(!property_exists($this,'token') || $this->token==NULL) throw new \Exception('token not found');
+            if(!property_exists($this->token,'expires_in') || $this->token->expires_in==NULL) throw new \Exception('expires_in not found');
+            if(!property_exists($this->token,'created') || $this->token->created==NULL) throw new \Exception('created not found');
             return (($this->token->expires_in + $this->token->created)<=time());
         }
         catch(\Exception $e)
         {
+						\Logs\logErr(var_export($this,true));
             \Logs\logWarning($e->getMessage());
         }
         return false;
@@ -59,7 +61,7 @@ class BoxDrive extends Drive\Client
                   'redirect_uri=' . self::REDIRECT_URI;
 
         $response=json_decode($this->curl_post(self::TOKEN_URL,$body,$options));
-
+				\Logs\logDebug($body);
         if($response->error)
         {
             throw new Exception($response->error);
@@ -76,7 +78,7 @@ class BoxDrive extends Drive\Client
                 'refresh_token=' . urlencode($this->token->refresh_token) . '&' .
                 'client_id=' . urlencode(self::CLIENT_ID) . '&' .
                 'client_secret=' . urlencode(self::CLIENT_SECRET);
-
+						\Logs\logDebug($body);
             $response=json_decode($this->curl_post(self::TOKEN_URL,$body));
             if($response->error)
             {
@@ -187,13 +189,15 @@ class BoxDrive extends Drive\Client
             $book_folder=$this->getBookFolder();
             return (object) array (
                 'access_token' => $this->getAccessToken(),
-                'book_folder' => $book_folder->id,
-                'urls' => array('download' => array( 'method' => 'GET', 'url' => self::API_URL.'/files/{fileid}/content' ),
-                                'upload' => array( 'method' => 'POST', 'url' => self::UPLOAD_URL ,
-                                                    'header' => array('Authorization: Bearer {access_token}'),
-                                                    'body' => array( 'attributes' => '"name":"{filename}", "parent":{"id":"{parentid}"}', 'file' => '{filecontent}' ) ),
-                                'delete' => array('method' => 'DELETE', 'url' => self::API_URL.'/files/{fileid}') )
-                 );
+                'book_folder' => $book_folder->id ,
+                'urls' => (object)array('download' => (object)array( 'method' => 'GET', 'url' => self::API_URL.'/files/{fileid}/content' ),
+                                'upload' => (object)array( 'method' => 'POST', 'url' => self::UPLOAD_URL ,
+                                                    'headers' => (object)array('Authorization: Bearer {accesstoken}'),
+                                                    'body' => (object)array( 
+																																'attributes' => (object)array('name'=>'{filename}', 'parent'=> (object)array('id'=>'{parentid}')), 
+																																'file' => '{filecontent}' ) ),
+                                'delete' => (object)array('method' => 'DELETE', 'url' => self::API_URL.'/files/{fileid}')
+                 ) );
         }
         throw new \Exception('not logged');
     }
@@ -236,6 +240,7 @@ class BoxDrive extends Drive\Client
         $response=json_decode($response);
         return $response;
     }
+	  public function useDownloadProxy() { return true; }
 }
 
  ?>

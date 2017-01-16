@@ -62,7 +62,8 @@ abstract class Client
     public function setBookId($bid) { $this->bookid=$bid; }
     public function isLogged() { return ($this->getAccessToken() && !$this->isExpired()); }
     public function getAccessToken() { if($this->token) return $this->token->access_token; return null; }
-
+    public function useDownloadProxy() { return false; }
+  
     protected abstract function uploadFile();
     protected abstract function downloadFile();
     protected abstract function deleteFile();

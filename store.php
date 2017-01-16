@@ -125,8 +125,14 @@ if($action==='downloadLink')
       {
         $access_token=$client->getAccessToken();
 
-        $link=json_encode($client->downloadLink($fileid));
-
+        $link=(object)$client->downloadLink($fileid);
+        if($client->useDownloadProxy())
+        {
+          $link->url='proxy.php?action=download&url=' . urlencode($link->url);
+        }
+        
+        $link=json_encode($link);
+        
         $result = "{\"access_token\": \"$access_token\", \"fileid\": \"$fileid\", \"filename\":\"$filename\", \"filesize\": $file_size, \"vendor_code\": \"$vendor\", \"downloadLink\": $link }";
 
         \Logs\logDebug(var_export($result,true));

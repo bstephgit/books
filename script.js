@@ -207,9 +207,9 @@ Store.prototype.upload = function (file) {
 			else
 			{
 				var data;
-				if (body[dataname].data) data = body[dataname].data.toString();
-				else data = body[dataname].toString();
-				console.log(dataname,data);
+				if (body[dataname].data) data = JSON.stringify(body[dataname].data);
+				else data = JSON.stringify(body[dataname]);
+				console.log('before replace data =>',dataname,data);
 
 				for(key in replace_tab)
 				{
@@ -221,7 +221,7 @@ Store.prototype.upload = function (file) {
 				if(body[dataname].type) blob=new Blob([data] , { 'type' : body[dataname].type });
 				else blob=data;
 				formData.append(dataname, blob);
-				console.log(dataname,data);
+				console.log('after replace data =>',dataname,data);
 			}
 		}
 	}
@@ -314,7 +314,7 @@ Store.prototype.download = function()
 		}
 	}
 	
-	if(vendor==='PCLD')
+	if(/*vendor==='PCLD'*/false)
 	{
 		req.onload = function()
 		{
@@ -616,6 +616,7 @@ document.addEventListener("DOMContentLoaded", function() {
 						var id;
 						if(response.id) id=response.id;
 						if(response.fileids) id=response.fileids[0];
+						if(response.entries) id=response.entries[0].id;
 
 						document.getElementById('fileid').value=id;
 						//add image

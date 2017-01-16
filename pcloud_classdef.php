@@ -187,18 +187,25 @@ class PCloudDrive extends Drive\Client
 			if($this->isLogged())
 			{
 				$access_token=$this->getAccessToken();
-				$url = self::API_URL . '/getfilelink?fileid=' . $fileid . '&access_token=' . $access_token . '&forcedownload=1';
-				$download_url = $url;
-				/*$options=array(
+				$download_url = self::API_URL . '/getfilelink?fileid=' /*'/getpublinkdownload?fileid='*/ . $fileid . '&access_token=' . $access_token . '&forcedownload=1';
+				//$url = self::API_URL . '/getfilepublink?fileid=' . $fileid;
+				if($this->useDownloadProxy())
+				{
+					$options=array(
 							 CURLOPT_HTTPHEADER => array(
 									 'Authorization: Bearer ' . $access_token
 							 )
 					 );
 
-				$download_url=json_decode($this->curl_request($url,$options));
-				$download_url= 'https://' . $download_url->hosts[0] . $download_url->path . '?access_token=' . $access_token; */
+					$resp=json_decode($this->curl_request($download_url,$options));
+					if($resp->result!=0)
+					{
+						throw new \Exception('cannot get file link');
+					}
+					$download_url= 'https://' . $resp->hosts[0] . $resp->path;
+				}
 				
-				return array( 'method' => 'GET', 'url' =>  $download_url );
+				return array( 'method' => 'GET', 'url' =>  $download_url, 'headers' => array("Authorization: Bearer $access_token") );
 			}
 			else
 			{
@@ -241,6 +248,7 @@ class PCloudDrive extends Drive\Client
         }
         return $response->metadata;
     }
+		public function useDownloadProxy() { return true; }
 }
     
     ?>
