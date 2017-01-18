@@ -202,7 +202,7 @@ class PCloudDrive extends Drive\Client
 					{
 						throw new \Exception('cannot get file link');
 					}
-					$download_url= 'https://' . $resp->hosts[0] . $resp->path;
+					$download_url= 'https://' . $resp->hosts[ time() % count($resp->hosts) ] . $resp->path;
 				}
 				
 				return array( 'method' => 'GET', 'url' =>  $download_url, 'headers' => array("Authorization: Bearer $access_token") );
