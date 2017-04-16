@@ -32,41 +32,58 @@ if(!is_dir(img_dir()))
     mkdir(img_dir());
 }
 
+function saveImageFile($dirname)
+{
+  $img_name = '';
+  if(isset($_POST['imgfile']) && strlen($_POST['imgfile'])>0)
+  {
+      if(!is_dir(img_dir($dirname)))
+      {
+          if(mkdir(img_dir($dirname))===false)
+            throw new \Exception("cannot create directory");
+      }
+      else
+      {
+        \Logs\logWarning("dir '$dirname' already created");
+      }
+      $img_name = img_dir($dirname).'/img.png';
+      file_put_contents($img_name,base64_decode($_POST['imgfile']));
+  }
+  return $img_name;
+}
+
 function pdfGetImage($pdf_name)
 {
     $pdf_ext=".pdf";
     $pos=strpos($pdf_name,$pdf_ext);
     $img_name='';
-
+    $img_basename='';
     if( $pos!=false && ($pos+strlen($pdf_ext))==strlen($pdf_name) )
     {
         $img_basename = '[' . basename($pdf_name,$pdf_ext) . ']';
-        
-        if(!is_dir(img_dir($img_basename)))
-        {
-            if(mkdir(img_dir($img_basename))===false)
-              throw new \Exception("cannot create directory");
-        }
-        else
-        {
-          \Logs\logWarning("dir '$img_basename' already created");
-        }
-        
-        if(isset($_POST['imgfile']) && strlen($_POST['imgfile'])>0)
-        {
-          $img_name = img_dir($img_basename).'/img.png';
-          file_put_contents($img_name,base64_decode($_POST['imgfile']));
-        }
-        else
-        {
-          throw new \Exception('no post data for image');
-        }
     }
     else
     {
       \Logs\logInfo("'$pdf_name': not PDF file");
+      if(strlen($pdf_name)>0)
+      {
+        $img_basename= '[' . pathinfo($pdf_name)['filename'] . ']';
+      }
+      else
+      {
+        $img_basename = uniqid ();
+      }
     }
-    \Logs\logInfo("img='$img_name'");
+    try
+    {
+      $img_name = saveImageFile($img_basename);
+       \Logs\logInfo("img='$img_name'");
+    }
+    catch(\Exception $e)
+    {
+      $errid=\Logs\logException($e);
+    }
+   
     return $img_name;
 }
 
@@ -236,8 +253,41 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     $descr=mysqli_real_escape_string($con,$_POST['descr']);
     $year=$_POST['year'];
     $id=$_POST['bookid'];
+    $imgflag=$_POST['uploadflag'];
+    $img_path='';  
+    $update_query="UPDATE BOOKS SET TITLE='$title',DESCR='$descr',AUTHORS='$author',YEAR='$year'";
+  
+    if(isset($_POST['imgfile']) && strlen($_POST['imgfile']) > 0 && $imgflag==='true')
+    {
     
-    $res=$dbase->query("UPDATE BOOKS SET TITLE='$title',DESCR='$descr',AUTHORS='$author',YEAR='$year' WHERE ID=$id");
+      $res=$dbase->query("SELECT IMG_PATH, FILE_NAME FROM BOOKS B, BOOKS_LINKS L WHERE B.ID=$id AND L.BOOK_ID=B.ID");
+      if($res->next(false))
+      {
+        $img_path=$res->field_value('IMG_PATH');
+        if(($img_path!==img_dir('book250x250.png') && strlen($img_path)>0))
+        {
+          \Logs\logDebug("unlink " + $img_path);
+          unlink($img_path);
+        }
+        else
+        {
+          $img_basename= '[' . pathinfo($res->field_value('FILE_NAME'))['filename'] . ']';
+          mkdir(img_dir($img_basename));
+          $img_path=img_dir($img_basename) . '/img.png';
+          \Logs\logDebug($img_path);
+          $update_query = $update_query . ', IMG_PATH=\'' . mysqli_real_escape_string($con,$img_path) . '\'';
+        }
+        if(strlen($img_path))
+        {
+          file_put_contents($img_path,base64_decode($_POST['imgfile']));
+        }
+      }else \Logs\logDebug("IMG_PATH not found");
+      
+    }else {  
+      \Logs\logDebug(sprintf("isset=%d imgflag=%s",isset($_FILES['imginput']), $imgflag)); 
+    }
+ 
+    $res=$dbase->query($update_query . " WHERE ID=$id");
     
     $dbase->query("DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id");
     
@@ -252,6 +302,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
             $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($subject,$id)");
         }
     }
+
     $dbase->close();
     header('Location: home.php?bookid='.$id);
 }

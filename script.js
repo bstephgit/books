@@ -620,9 +620,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
 						document.getElementById('fileid').value=id;
 						//add image
-						var canvas = document.getElementById("preview");
-						document.getElementById('imgfile').value=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
-								
+						if(file_input.files[0].type=='application/pdf')
+						{
+							var canvas = document.getElementById("preview");
+							document.getElementById('imgfile').value=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
+						}
 						upload_form.submit();
 					}
 					else
@@ -631,10 +633,12 @@ document.addEventListener("DOMContentLoaded", function() {
 					}	
 				}
         var ok = true;
-        if(ok && upload_form.file_upload.files.length===0)
+				// do_upload_file: true if upload mode, false if update mode
+				var do_upload_file = (file_input!==null);
+        if(do_upload_file && file_input.files.length===0)
         {
-            alert('error: no file selected');
-            ok = false;
+					alert('error: no file selected');
+					ok = false;
         }
         if (ok && upload_form.title.value.length===0)
         {
@@ -644,16 +648,20 @@ document.addEventListener("DOMContentLoaded", function() {
         if(ok && upload_form.author.value.length===0)
         {
             alert('error: no author');
+						ok = false;
         }
-        //e.preventDefault();
-        e.preventDefault();
         
-				if(ok)
+				do_upload_file = do_upload_file && ok;
+				if(do_upload_file)
 				{
 
 						var submit_btn = document.getElementById('submit_btn');
-						var file=document.getElementById('file_upload').files[0];
+						var file=file_input.files[0];
 						var index=0;
+					
+						//prevent form to submit before upload
+						e.preventDefault();
+					
 						for(; index < upload_form.store.length; index++) if(upload_form.store[index].checked) break;
 						
 						var store = new Store('/books/store.php?action=login&store_code='+upload_form.store[index].value);
@@ -674,8 +682,60 @@ document.addEventListener("DOMContentLoaded", function() {
 
 						submit_btn.disabled = true;
 				}
-				
+				else if (!ok) // problems, no update
+				{
+					e.preventDefault();
+				}
+				else
+				{
+					document.getElementById('imgfile').value=getImgContent(document.getElementById('preview'));
+				}
 	}
         
 });
-		
+
+function loadimage(file_input)
+{
+	
+	var file = file_input.files[0];		
+	if(file.type==='image/jpeg' || file.type=='image/png')
+	{
+		var imgpreview = document.getElementById('preview');
+		if(imgpreview)
+		{
+			imgpreview.src = window.URL.createObjectURL(file);
+		}
+		document.getElementById('uploadflag').value='true';
+	}
+	else
+	{
+		document.getElementById('uploadflag').value='false';
+		alert('bad img file type: ' + file.type);
+	}
+}
+
+function browseimage()
+{
+	var file_input=document.getElementById('imginput');
+	if(file_input)
+	{
+		file_input.click();
+		console.log('file clicked');
+	}
+}
+
+function getImgContent(imgobj)
+{
+	var content='';
+	if(imgobj.nodeName.toUpperCase()==='IMG')
+	{
+		var canvas = document.createElement("canvas");
+    canvas.width = imgobj.naturalWidth;
+    canvas.height = imgobj.naturalHeight;
+		console.log('image',imgobj.width,imgobj.height);
+		var context = canvas.getContext("2d");
+		context.drawImage(imgobj,0,0);
+		content=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
+	}
+	return content;
+}

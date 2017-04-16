@@ -126,27 +126,27 @@ function print_book($rec,$subjects,$links)
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
     <script type='text/javascript'>
           
-      function downloadFile(bookid)
-      {
-        var store = new Store('store.php?action=downloadLink&bookid='+bookid);
+          function downloadFile(bookid)
+          {
+            var store = new Store('store.php?action=downloadLink&bookid='+bookid);
 
-        store.onerror = function (err) {
-          console.error(err);
-          var msg=err.toString();
-          if(err.status){ 
-            var reader = new window.FileReader(); 
-            reader.readAsDataURL(err.response); reader.onloadend = function() 
-            {  var res = reader.result; msg = err.status + " " + atob(res.substr(res.indexOf(',')+1)); alert(msg); }
-          }else{
-            alert(msg);
+            store.onerror = function (err) {
+              console.error(err);
+              var msg=err.toString();
+              if(err.status){ 
+                var reader = new window.FileReader(); 
+                reader.readAsDataURL(err.response); reader.onloadend = function() 
+                {  var res = reader.result; msg = err.status + " " + atob(res.substr(res.indexOf(',')+1)); alert(msg); }
+              }else{
+                alert(msg);
+              }
+              
+            };
+            store.onlogin = function (obj) {
+              store.download();
+            };
+            store.login();
           }
-
-        };
-        store.onlogin = function (obj) {
-          store.download();
-        };
-        store.login();
-      }
       function changepage(event)
       {
          var dochange = (event.type==='change') || (event.type==='keyup' && event.keyCode===13);
@@ -260,6 +260,7 @@ function print_book($rec,$subjects,$links)
                         $book['YEAR']=$rec_book->field_value('YEAR');
                         $book['AUTHORS']=$rec_book->field_value('AUTHORS');
                         $book['DESCR']=$rec_book->field_value('DESCR');
+                        $book['IMG_PATH']=$rec_book->field_value('IMG_PATH');
                     }
                     while($rec_subjects->next())
                     {
@@ -291,6 +292,10 @@ function print_book($rec,$subjects,$links)
                 <?php } if($edit){ ?>
                     <input type='hidden' name='action' value='book_update'>
                     <input type='hidden' name='bookid' value=''>
+                    <?php echo '<img id="preview" width="250" height="280" src="' . $book['IMG_PATH'] . '" style="cursor: hand" onclick="browseimage()"/>'; ?>
+                    <input type='file' name="imginput" id='imginput' style='visibility: hidden' onchange='loadimage(this)'>
+                    <input type='hidden' name='uploadflag' id='uploadflag' value='false'>
+                    <input type='hidden' name='imgfile' id='imgfile'>
                 <?php } if($upload){ ?>
                 
                     <table class="nav_element">
@@ -419,6 +424,7 @@ function print_book($rec,$subjects,$links)
                        echo '</div>';
                    }
                    $dbase->close();
+                   
                    $page=min($page,$page_max);
                    if($page>1)
                    {
