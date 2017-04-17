@@ -207,6 +207,10 @@ class BoxDrive extends Drive\Client
 			{
 				$root_url=self::API_URL;
 				$access_token=$this->getAccessToken();
+				if($this->useDownloadProxy())
+				{
+					return array( 'method' => 'GET', 'url' =>  sprintf("%s/files/%s/content",$root_url,$fileid), 'headers' => array());
+				}
 				return array( 'method' => 'GET', 'url' =>  sprintf("%s/files/%s/content",$root_url,$fileid), 'headers' => array("Authorization: Bearer $access_token"));
 			}
 			else

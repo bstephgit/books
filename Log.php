@@ -4,6 +4,10 @@ namespace Logs;
 
 include_once "db.php";
 
+function isLogsActivated()
+{
+  return true;
+}
 class Entry
 {
     private $msg;
@@ -39,6 +43,8 @@ class Entry
 
 function logBase($level,$msg)
 {
+  if(isLogsActivated())
+  {
     $e = new Entry();
 
     $bt=debug_backtrace()[1];
@@ -54,6 +60,8 @@ function logBase($level,$msg)
     $e->function=str_replace('\\','\\\\', $function);
     $e->msg=str_replace('\'', '\\\'', $msg);
     return $e->insert();
+  }
+  return true;
 }
     
 function logInfo($msg)
@@ -67,6 +75,8 @@ function logErr($msg)
 }
 function logException(\Exception $e)
 {
+  if(isLogsActivated())
+  {
     $entry=new Entry();
     $entry->level='ERR';
     $entry->msg=str_replace('\'', '\\\'', $e->getMessage());
@@ -83,6 +93,8 @@ function logException(\Exception $e)
     $ret=$entry->insert();
    
     return $ret;
+  }
+  return true;
 }
 function logWarning($msg)
 {

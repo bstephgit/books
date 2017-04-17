@@ -188,7 +188,7 @@ function print_book($rec,$subjects,$links)
         <div class="nav_elements">
             <a class="nav_element" href="home.php">home</a><br>
             <?php if(isset($_GET['bookid'])) {
-                printf( '<a class="nav_element" href="upload.php?action=book_delete&bookid=%s">delete book</a><br>',$_GET['bookid']);
+                printf( '<a class="nav_element" href="upload.php?action=book_delete&bookid=%s" onclick="return confirm(\'delete book?\');">delete book</a><br>',$_GET['bookid']);
                 printf( '<a class="nav_element" href="home.php?edit=%s">edit book</a><br>',$_GET['bookid']);
             } ?>
             <a class="nav_element" href="home.php?upload=1">uploader</a><br>

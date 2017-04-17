@@ -128,7 +128,9 @@ if($action==='downloadLink')
         $link=(object)$client->downloadLink($fileid);
         if($client->useDownloadProxy())
         {
-          $link->url='proxy.php?action=download&url=' . urlencode($link->url);
+          $link->url='proxy.php?action=download&url=' . base64_encode($link->url);
+          array_push($link->headers,"Authorization: Basic " . base64_encode('b13_17778490:tecste1'));
+          array_push($link->headers,"Store-Token: $access_token");
         }
         
         $link=json_encode($link);

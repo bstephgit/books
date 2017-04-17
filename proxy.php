@@ -1,5 +1,5 @@
 <?php
-
+include_once "Log.php";
 
 $action='';
 
@@ -11,19 +11,21 @@ if(isset($_GET['action']))
 if($action==='download')
 {
   $url=base64_decode($_GET['url']);
+  \Logs\logDebug($url);
   $headers=getallheaders();
   if(isset($headers['Authorization']) || isset($headers['authorization']))
   {
     $tokenid='';
-    if(isset($headers['Authorization']))
+    if(isset($headers["Store-Token"]))
     {
-      $tokenid=$headers['Authorization'];
+      $tokenid='Authorization: Bearer ' . $headers["Store-Token"];
     }
-    if(isset($headers['authorization']))
+    if(isset($headers["store-token"]))
     {
-      $tokenid=$headers['authorization'];
+      $tokenid='Authorization: Bearer ' . $headers["store-token"];
     }
-  
+    \Logs\logDebug('access_token=' . $tokenid);
+    
     $curl = curl_init();
     //$out = fopen('php://output', 'w');
     $options=array(
@@ -43,20 +45,24 @@ if($action==='download')
 
     curl_setopt_array($curl, $options);
     $result = curl_exec($curl);
-    if($result)
+
+    $code=curl_getinfo($curl,CURLINFO_HTTP_CODE);
+
+    if($code<400)
     {
-      $code=curl_getinfo($curl,CURLINFO_HTTP_CODE);
-      http_response_code($code);
+      \Logs\logInfo($code);
     }
     else
     {
-      $code=curl_getinfo($curl,CURLINFO_HTTP_CODE);
-      http_response_code($code);
-      echo sprintf('{"error":"opening url %s [%s]"}',$url,$tokenid);
+      $msg = sprintf('{"error":"opening url %s [%s]"}',$url,$tokenid);
+      //$debug = ob_get_clean();
+      //\Logs\logError('error: ' . $debug);
+      \Logs\logError($msg);
     }
     //fclose($out);
+    http_response_code($code);
+
     curl_close($curl);
-    //$debug = ob_get_clean();
     //$out=fopen('debug.txt','w');
     //fwrite($out,$debug);
     //fclose($out);
@@ -64,6 +70,7 @@ if($action==='download')
   else
   {
     http_response_code(400);
+    \Logs\logWarning("Authorisation header is missing");
     echo '{"error":"Authorisation header is missing"}';
   }
   
