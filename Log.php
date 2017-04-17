@@ -198,7 +198,7 @@ class Config
     {
       $nb1 = self::getLevelNumber($level);
       $nb2 = self::getLevelNumber($this->_config->level);
-      return $nb2 <= $nb1;
+      return $nb2 >= $nb1;
     }
     private static function getLevelNumber($level)
     {
