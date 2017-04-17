@@ -4,10 +4,6 @@ namespace Logs;
 
 include_once "db.php";
 
-function isLogsActivated()
-{
-  return true;
-}
 class Entry
 {
     private $msg;
@@ -43,7 +39,7 @@ class Entry
 
 function logBase($level,$msg)
 {
-  if(isLogsActivated())
+  if(Config::instance()->enabled)
   {
     $e = new Entry();
 
@@ -66,19 +62,27 @@ function logBase($level,$msg)
     
 function logInfo($msg)
 {
-    return logBase('INFO',$msg);
+  if(Config::instance()->isLogLevelEnough(Config::INFO))
+  {
+    return logBase(Config::INFO,$msg);
+  }
+  return false;
 }
 
 function logErr($msg)
 {
-    return logBase('ERR',$msg);
+  if(Config::instance()->insLogLevelEnough(Config::ERROR))
+  {
+    return logBase(Config::ERROR,$msg);
+  }
+  return false; 
 }
 function logException(\Exception $e)
 {
-  if(isLogsActivated())
+  if(Config::instance()->enabled)
   {
     $entry=new Entry();
-    $entry->level='ERR';
+    $entry->level=Config::ERROR;
     $entry->msg=str_replace('\'', '\\\'', $e->getMessage());
     $entry->file=basename($e->getFile());
     $entry->line=strval($e->getLine());
@@ -98,11 +102,114 @@ function logException(\Exception $e)
 }
 function logWarning($msg)
 {
-    return logBase('WARN',$msg);
+    if(Config::instance()->isLogLevelEnough(Config::WARNING))
+    {
+      return logBase(Config::WARNING,$msg);
+    }
+    return false;
 }
 
 function logDebug($msg)
 {
-    return logBase('DEBUG',$msg);
+  if(Config::instance()->isLogLevelEnough(Config::DEBUG))
+  {
+    return logBase(Config::DEBUG,$msg);
+  }
+  return false;
+}
+
+class Config
+{
+    private $_config;
+    private static $_singleton=null;
+    const INFO='INFO';    
+    const WARNING='WARN';
+    const ERROR='ERR';
+    const DEBUG='DEBUG';
+      
+    public static function instance()
+    {
+      if(self::$_singleton===null)
+      {
+         self::$_singleton = new Config;
+      }
+      return self::$_singleton;
+    }
+    private function __construct()
+    {
+        $this->_config = (object)array('enabled'=>false,'level'=>self::INFO);
+        $this->load();
+    }
+    private function load()
+    {
+        if(file_exists ('logs.json'))
+        {
+          $this->_config=json_decode(file_get_contents('logs.json'));
+        }
+       
+    }
+    private function save()
+    {
+       file_put_contents('logs.json',json_encode($this->_config));
+    }
+    public function __get($property)
+    {
+      if($property==='enabled')
+      {
+        return $this->_config->enabled;
+      }
+      if($property==='level')
+      {
+        return $this->_config->level;
+      }
+      return null;
+    }
+    
+    public function __set($property,$value)
+    {
+      if($property==='enabled' && is_bool($value))
+      {
+        $this->_config->enabled=$value;
+        $this->save();
+      }
+      if($property==='level' && is_string($value))
+      {
+        if($value!==$this->_config->level)
+        {
+          $ok=false;
+          switch($value)
+          {
+            case self::INFO:
+            case self::ERROR:
+            case self::WARNING:
+            case self::DEBUG:
+              $ok=true;
+              
+          }
+          if($ok)
+          {
+            $this->_config->level=$value;
+            $this->save();
+          }
+        }
+      }
+    }
+    public function isLogLevelEnough($level)
+    {
+      $nb1 = self::getLevelNumber($level);
+      $nb2 = self::getLevelNumber($this->_config->level);
+      return $nb2 <= $nb1;
+    }
+    private static function getLevelNumber($level)
+    {
+      switch($level)
+      {
+        case self::ERROR: return 0;
+        case self::WARNING: return 1;
+        case self::INFO: return 2;
+        case self::DEBUG: return 3;
+        default: return 4;
+      }
+    }
 }
 ?>
