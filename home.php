@@ -1,6 +1,7 @@
 <?php
 include "db.php";
-
+include "Log.php";
+  
 session_start();
 
 function encodePath($path)
@@ -115,6 +116,12 @@ function print_book($rec,$subjects,$links)
         echo "</table></div>";
     }
 }
+
+if(isset($_GET["page"]) || isset($_GET["subject"]))
+{
+  \Logs\logInfo('Set Cookie \'browse_backlink\' ' . $_SERVER['REQUEST_URI']);
+  setcookie("browse_backlink",$_SERVER['REQUEST_URI']);
+}
 ?>
 <html>
 <head>
@@ -190,6 +197,7 @@ function print_book($rec,$subjects,$links)
             <?php if(isset($_GET['bookid'])) {
                 printf( '<a class="nav_element" href="upload.php?action=book_delete&bookid=%s" onclick="return confirm(\'delete book?\');">delete book</a><br>',$_GET['bookid']);
                 printf( '<a class="nav_element" href="home.php?edit=%s">edit book</a><br>',$_GET['bookid']);
+                printf( '<a class="nav_element" href="%s">back</a><br>',$_COOKIE['browse_backlink']);
             } ?>
             <a class="nav_element" href="home.php?upload=1">uploader</a><br>
         </div>

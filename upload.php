@@ -264,27 +264,41 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
       if($res->next(false))
       {
         $img_path=$res->field_value('IMG_PATH');
-        if(($img_path!==img_dir('book250x250.png') && strlen($img_path)>0))
+        $img_basename= '[' . pathinfo($res->field_value('FILE_NAME'))['filename'] . ']';
+        if($img_path!=null && strlen($img_path)>0 && $img_path!==img_dir('book250x250.png'))
         {
-          \Logs\logDebug("unlink " + $img_path);
-          unlink($img_path);
+          if(is_file($img_path))
+          {
+            \Logs\logDebug('unlink ' . $img_path);
+            unlink($img_path); 
+          }
         }
         else
         {
-          $img_basename= '[' . pathinfo($res->field_value('FILE_NAME'))['filename'] . ']';
-          mkdir(img_dir($img_basename));
           $img_path=img_dir($img_basename) . '/img.png';
           \Logs\logDebug($img_path);
           $update_query = $update_query . ', IMG_PATH=\'' . mysqli_real_escape_string($con,$img_path) . '\'';
         }
         if(strlen($img_path))
         {
-          file_put_contents($img_path,base64_decode($_POST['imgfile']));
+          if(!is_dir(img_dir($img_basename)))
+          {
+            mkdir(img_dir($img_basename));
+          }
+          $res=file_put_contents($img_path,base64_decode($_POST['imgfile']));
+          if($res===false)
+          {
+            \Logs\logError('Error writing img content at ' . $img_path );
+          }
+          else
+          {
+            \Logs\logDebug('writing img content at ' . $img_path . '. ' . $res . ' bytes written.');
+          }
         }
-      }else \Logs\logDebug("IMG_PATH not found");
+      }else \Logs\logWarning("IMG_PATH not found");
       
     }else {  
-      \Logs\logDebug(sprintf("isset=%d imgflag=%s",isset($_FILES['imginput']), $imgflag)); 
+      \Logs\logDebug(sprintf("imgfile=%d imgflag=%s",isset($_POST['imgfile']), $imgflag)); 
     }
  
     $res=$dbase->query($update_query . " WHERE ID=$id");
