@@ -148,7 +148,10 @@ table.book_list
     display: inline;
     margin : 20px 20px 20px 20px;
 }
-
+.scrollable{
+  height: 500px;
+  overflow-x: scroll
+}
 /* log view*/
 body.logview
 {
