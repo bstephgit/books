@@ -95,7 +95,15 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
         <div class='navtitle'><h3>Rechercher</h3></div>
         <div class="nav_elements">
            <form method="GET" action="home.php">
+            <?php 
+            if(isset($_GET["search"]))
+            {
+              printf("<input type='text' name='search' value='%s'>",$_GET["search"]);
+            }
+            else {
+            ?>
             <p><input type='text' name="search"></p>  
+            <?php } ?> 
             <p><input type='submit' value='rechercher'></p>
            </form>
         </div>
