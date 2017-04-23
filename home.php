@@ -71,13 +71,6 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
            window.location.href = url;
          }
       }
-      function searchQuery()
-      {
-        var querystring = document.getElementById('searchstring').value;
-        var url = new URL (window.location);
-        window.location = url.origin + url.pathname + "?search=" + encodeURIComponent(querystring) ;
-        return false;
-      }
     </script>
 </head>
 <body>
@@ -101,8 +94,8 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
     <div class='internal'>
         <div class='navtitle'><h3>Rechercher</h3></div>
         <div class="nav_elements">
-           <form method="POST" action="" onsubmit='return searchQuery();'>
-            <p><input type='text' id="searchstring"></p>  
+           <form method="GET" action="home.php">
+            <p><input type='text' name="search"></p>  
             <p><input type='submit' value='rechercher'></p>
            </form>
         </div>
