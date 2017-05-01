@@ -13,9 +13,9 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
 ?>
 <html>
 <head>
-    
     <link type="text/css" rel="stylesheet" href="books.css"/>
     <script type='text/javascript' src='script.js'></script>
+    <script type='text/javascript' src='tags.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/md5-min.js'></script>
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
@@ -85,7 +85,6 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
             <?php if(isset($_GET['bookid'])) {
                 printf( '<a class="nav_element" href="upload.php?action=book_delete&bookid=%s" onclick="return confirm(\'delete book?\');">delete book</a><br>',$_GET['bookid']);
                 printf( '<a class="nav_element" href="home.php?edit=%s">edit book</a><br>',$_GET['bookid']);
-                printf( '<a class="nav_element" href="%s">back</a><br>',$_COOKIE['browse_backlink']);
             } ?>
             <a class="nav_element" href="home.php?upload=1">uploader</a><br>
         </div>
@@ -94,7 +93,7 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
     <div class='internal'>
         <div class='navtitle'><h3>Rechercher</h3></div>
         <div class="nav_elements">
-           <form method="GET" action="home.php">
+          <form method="GET" action="home.php">
             <?php 
             if(isset($_GET["search"]))
             {
@@ -103,7 +102,7 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
             else {
             ?>
             <p><input type='text' name="search"></p>  
-            <?php } ?> 
+            <?php } ?>
             <p><input type='submit' value='rechercher'></p>
            </form>
         </div>
@@ -158,6 +157,7 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
                     $links=$dbase->query('SELECT lnks.FILE_ID,lnks.FILE_SIZE,fs.VENDOR FROM BOOKS_LINKS AS lnks, FILE_STORE AS fs WHERE lnks.BOOK_ID=' . $id . ' AND fs.ID=lnks.STORE_ID');
                     \utils\print_book($rec,$subjects,$links);
                     $dbase->close();
+                    printf( '<a class="nav_element" href="%s">back</a><br>',$_COOKIE['browse_backlink']);
                 }
 
             } 

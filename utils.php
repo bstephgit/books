@@ -2,6 +2,7 @@
 namespace utils;
 
 include_once "db.php";
+include_once "Log.php";
 
 function encodePath($path)
 {
@@ -76,6 +77,47 @@ function print_subjects_tab($base)
     }
 }
 
+function print_subjects_tags($base,$subjects)
+{
+    if($base && $base->is_connected())
+    {
+        $tag_ids='(';
+        $sep='';
+        foreach($subjects as $val)
+        {
+          $tag_ids = $tag_ids . $sep . $val;
+          $sep=',';
+        }
+        $tag_ids = $tag_ids . ')';
+       
+        \Logs\logDebug($tag_ids);
+        $rec=$base->query('SELECT ID,NAME FROM IT_SUBJECT WHERE ID IN ' . $tag_ids . ' ORDER BY NAME');
+        echo '<div class="tags edit" onclick=\'hide_entries()\'>';
+        if($rec)
+        {
+            while($rec->next()){
+               echo '<span class="tag label label-info">';
+               echo '<span>'. $rec->field_value('NAME') . '</span>';
+               echo '<a onclick=\'remove(this)\'><i class="remove glyphicon glyphicon-remove-sign glyphicon-white"></i></a>';
+               echo '</span>';
+               //echo '<td><input type="checkbox" name="topic' . $rec->field_value('ID') . '">' . $rec->field_value('NAME') . '<td>';
+            }
+        }
+        else
+        {
+          \Logs\logWarning('tags: record object null');
+        }
+        echo "<span class='dropdown'>";
+        echo "<span id='currenteditable' class='editable' contenteditable onkeypress='return validate(event);' onkeyup='keyup(event);'></span>";
+        echo "<div id='dropdown-content' class='dropdown-content'></div>";
+        echo '</span></div>';
+    }
+    else
+    {
+      \Logs\logWarning('database not connected');
+    }
+}
+
 function print_book($rec,$subjects,$links)
 {
     if($rec && $rec->next())
@@ -88,8 +130,15 @@ function print_book($rec,$subjects,$links)
         $img_src=encodePath($rec->field_value('IMG_PATH'));
         echo "<div class='book_record'><table class='book_record'>";
         echo '<tr>';
-        printf("<td width='210px' valign='top' rowspan='2'><img src=\"%s\" class='book'></td>",/*str_replace("'","\\'",*/$img_src/*)*/);
-        printf("<td colspan='2'><div class='book'><span class='book_title'>%s</span></div></td>",$title);
+        printf("<td width='210px' valign='top' rowspan='2'><img src=\"%s\" class='book'><div class='book'>Tags:</div><div class='tags display'>",/*str_replace("'","\\'",*/$img_src/*)*/);
+        while($subjects->next())
+        {
+          printf('<span class="tag label label-info"><span>%s</span></span>',$subjects->field_value('NAME'));
+        }
+        echo "</div></td>";
+        //printf("<td width='210px' valign='top'><img src=\"%s\" class='book'></td>",/*str_replace("'","\\'",*/$img_src/*)*/);
+        //printf("<td colspan='2'><div class='book'><span class='book_title'>%s</span></div></td>",$title);
+        printf("<td><div class='book'><span class='book_title'>%s</span></div></td>",$title);
         echo '</tr>';
         echo '<tr>';
         echo '<td>';
@@ -105,12 +154,13 @@ function print_book($rec,$subjects,$links)
            //echo sprintf("<div class='book'><a class='nav_element' href='upload.php?action=download&bookid=%s'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
         }
         echo '</td>';
-        echo '<td><div class="book"><ul class="book_tags"><LH>Tags</LH>';
+        /*echo '<td><div class="book"><ul class="book_tags"><LH>Tags</LH>';
         while($subjects->next())
         {
             printf('<li>%s</li>',$subjects->field_value('NAME'));
-        }
-        echo "</ul></div></td></tr>";
+        }*/
+        //echo "</ul></div></td></tr>";
+        echo "</tr>";
         echo "<tr><td>&nbsp;</td><td colspan='2'><div class='upload-out' id='upload-out' style='visibility: hidden; margin-left: 1cm'><div class='upload-in' id='upl-in1'><div></div></td></tr>";
         echo "</table></div>";
     }

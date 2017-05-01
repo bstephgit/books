@@ -26,7 +26,8 @@ if($edit)
     }
     while($rec_subjects->next())
     {
-        $subjects[ sprintf('topic%s',$rec_subjects->field_value('SUBJECT_ID')) ]=1;
+        //$subjects[ sprintf('topic%s',$rec_subjects->field_value('SUBJECT_ID')) ]=1;
+        $subjects[]=$rec_subjects->field_value('SUBJECT_ID');
     }
 }
 ?>
@@ -77,7 +78,7 @@ if($edit)
    </table>
   <?php } ?>
   <div class="nav_elements">
-      <?php  if($base){ \utils\print_subjects_tab($base); $base->close();}?>
+      <?php  if($base){ \utils\print_subjects_tags($base,$subjects); $base->close();}?>
   </div>
   <p><input type="submit" value='uploader' id='submit_btn'></p>
 </form>
@@ -96,10 +97,11 @@ if($edit)
 
     echo '<script type="text/javascript">';
         echo $script;
-        foreach ($subjects as $key => $value) {
+        /*foreach ($subjects as $key => $value) {
             printf('upload_form.%s.checked=true;',$key);
-        }
+        }*/
     echo '</script>';
 }
 $base->close();
 ?>
+            

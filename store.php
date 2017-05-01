@@ -65,12 +65,13 @@ $action='';
 $bookid='';
 $store='';
 $html='';
+$tag='';
 
 if(isset($_GET['action'])) $action=$_GET['action'];
 if(isset($_GET['bookid'])) $bookid=$_GET['bookid'];
 if(isset($_GET['store_code'])) $store=$_GET['store_code'];
 if(isset($_GET['html'])) $html=$_GET['html'];
-
+if(isset($_GET['tag'])) $tag=$_GET['tag'];
 
 if($action==='login')
 {
@@ -104,6 +105,7 @@ if($action==='downloadLink')
   if(strlen($bookid)==0)
   {
     http_response_code(400);
+    \Logs\logError("book id null");
     echo '{"error" : "book id null" }';
     exit;
   }
@@ -137,7 +139,7 @@ if($action==='downloadLink')
         
         $result = "{\"access_token\": \"$access_token\", \"fileid\": \"$fileid\", \"filename\":\"$filename\", \"filesize\": $file_size, \"vendor_code\": \"$vendor\", \"downloadLink\": $link }";
 
-        \Logs\logDebug(var_export($result,true));
+        \Logs\logInfo(var_export($result,true));
         if($html==='true')
         {
           echo sprintf($html_response,$result);
@@ -149,16 +151,36 @@ if($action==='downloadLink')
       }
 
     }
-    else { http_response_code(400); echo '{ "error": "book not found in database" }'; }
+    else {
+      \Logs\logError("book not found in database");
+      http_response_code(400); 
+      echo '{ "error": "book not found in database" }'; 
+    }
     
     $dbase->close();
   }
   else
   {
     http_response_code(400);
-    echo '{"error":"cannot open databse"}';
+    \Logs\logError("cannot open database");
+    echo '{"error":"cannot open database"}';
   }
 }
 
-
+if($action==='taglist' && strlen($tag)>0)
+{
+  \Logs\logDebug('tag=' . $tag);
+  $dbase=\Database\odbc()->connect();
+  $sql="SELECT ID,NAME FROM IT_SUBJECT WHERE NAME REGEXP '$tag' ORDER BY NAME";
+  $rec=$dbase->query($sql);
+  $res=array();
+  while($rec->next())
+  {
+    \Logs\logDebug('tag' . $rec->field_value('NAME'));
+  array_push($res, (object)array('id'=>$rec->field_value('ID'),'name'=>$rec->field_value('NAME')));
+  }
+  $dbase->close();
+  \Logs\logDebug(json_encode($res));
+  echo json_encode($res);
+}
 ?>
