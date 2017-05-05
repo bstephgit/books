@@ -3,6 +3,7 @@
 include_once "dbTransactions.php";
 include_once "db.php";
 include_once "Log.php";
+include_once "utils.php";
 
 session_start();
 
@@ -306,17 +307,23 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     $dbase->query("DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id");
     
     $res=$dbase->query('SELECT ID FROM IT_SUBJECT');
-    while($res->next(true))
+    
+    \Logs\logDebug($_POST['tags']);
+  
+    $subjects=explode('%0D',$_POST['tags']);
+    foreach($subjects as $subject)
     {
-        $subject=$res->field_value(0);
-        $code=sprintf('topic%d',$subject);
-        echo $code;
-        if(isset($_POST[$code]) && $_POST[$code]==='on')
+      if(strlen($subject)>0)
+      {
+        $sub_id=\utils\selectOrCreateSubject($dbase,$subject);
+        if($sub_id>0)
         {
-            $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($subject,$id)");
+            $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES($sub_id,$id)");
         }
+      }
     }
-
+    $sql='DELETE FROM IT_SUBJECT WHERE ID NOT IN (SELECT SUBJECT_ID FROM BOOKS_SUBJECTS_ASSOC) AND PERMANENT=0';
+    $dbase->query($sql);
     $dbase->close();
     header('Location: home.php?bookid='.$id);
 }

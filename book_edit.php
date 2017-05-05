@@ -4,6 +4,7 @@ include_once "db.php";
 
 $upload = isset($_GET['upload']) && $_GET['upload']==='1';
 $edit = isset($_GET['edit']);
+$subjects=array();
 $base=Database\odbc()->connect();
 
 if($edit)
@@ -14,7 +15,6 @@ if($edit)
     $sql="SELECT SUBJECT_ID FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id";
     $rec_subjects=$base->query($sql);
     $book=array();
-    $subjects=array();
     if($rec_book->next())
     {
         $book['ID']=$rec_book->field_value('ID');

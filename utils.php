@@ -93,14 +93,18 @@ function print_subjects_tags($base,$subjects)
         \Logs\logDebug($tag_ids);
         $rec=$base->query('SELECT ID,NAME FROM IT_SUBJECT WHERE ID IN ' . $tag_ids . ' ORDER BY NAME');
         echo '<div class="tags edit" onclick=\'hide_entries()\'>';
+        $tags=array();
+        
         if($rec)
         {
             while($rec->next()){
-               echo '<span class="tag label label-info">';
-               echo '<span>'. $rec->field_value('NAME') . '</span>';
+               echo '<span id=#' . $rec->field_value('ID')  . ' class="tag label label-info">';
+               echo '<input type=\'hidden\' name=\'topic' . $rec->field_value('ID') . '\' value=\'1\'>';
+               echo '<span>' . $rec->field_value('NAME') . '</span>';
                echo '<a onclick=\'remove(this)\'><i class="remove glyphicon glyphicon-remove-sign glyphicon-white"></i></a>';
                echo '</span>';
                //echo '<td><input type="checkbox" name="topic' . $rec->field_value('ID') . '">' . $rec->field_value('NAME') . '<td>';
+              array_push( $tags, $rec->field_value('NAME'));
             }
         }
         else
@@ -108,9 +112,10 @@ function print_subjects_tags($base,$subjects)
           \Logs\logWarning('tags: record object null');
         }
         echo "<span class='dropdown'>";
-        echo "<span id='currenteditable' class='editable' contenteditable onkeypress='return validate(event);' onkeyup='keyup(event);'></span>";
+        echo "<span id='currenteditable' class='editable' contenteditable onkeypress='return validate(event);' onkeyup='return onkey(event);'></span>";
         echo "<div id='dropdown-content' class='dropdown-content'></div>";
         echo '</span></div>';
+        printf( '<input type=\'hidden\' name=\'tags\' id=\'tags\' value=\'%s\'>', implode('%0D',$tags));
     }
     else
     {
@@ -289,6 +294,29 @@ function escapeRegExpChars($input)
 {
   $output=str_replace(array('+','[',']','\\','{','}'),array(escape('+'),escape('['),escape(']'),escape('\\'),escape('{'),escape('}')),$input);
   return $output;
+}
+
+function selectOrCreateSubject($db,$subject_name)
+{
+  if( $db && $db->is_connected())
+  {
+    $sql='SELECT ID FROM IT_SUBJECT WHERE NAME=\'' . $subject_name . '\'';
+    $rec=$db->query($sql);
+    if($rec->next())
+    {
+      return $rec->field_value('ID');
+    }
+    $sql_create='INSERT INTO IT_SUBJECT(NAME) VALUES(\'' . $subject_name . '\')';
+    $db->query($sql_create);
+    $rec=$db->query($sql);
+    if($rec->next())
+    {
+      return $rec->field_value('ID');
+    }
+    
+    \Logs\logWarning('cannot get subject\'' . $subject_name . '\' from database.');
+    return 0;
+  }
 }
 
 ?>
