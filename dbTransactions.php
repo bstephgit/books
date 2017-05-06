@@ -109,6 +109,8 @@ class CreateBook extends Transaction
 
             foreach($this->subjects as $subject)
             {
+							if(strlen($subject)>0)
+							{
 								$subject_id=\utils\selectOrCreateSubject($dbase,$subject);
 								if($subject_id>0)
 								{
@@ -117,7 +119,8 @@ class CreateBook extends Transaction
 								else
 								{
 									\Logs\logDebug('cannot get subjects id for \'' . $subject . '\'');
-								}
+								}	
+							}
             }
 
             $res=$dbase->query("SELECT ID FROM FILE_STORE WHERE VENDOR_CODE='$vendor'");
