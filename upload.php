@@ -169,38 +169,27 @@ if(isset($_POST['action']) && $_POST['action']==='book_create')
     $dbt->vendor=$_POST['store'];
     $dbt->filename=$_POST['file_name'];
     $dbt->file_id=$_POST['fileid'];
-
-    $dbase=\Database\odbc()->connect();
-    if($dbase)
+    
+    
+    \Logs\logDebug($_POST['tags']);
+    if(isset($_POST['tags']))
     {
-        $res=$dbase->query('SELECT ID FROM IT_SUBJECT');
-        while($res->next(true))
-        {
-            $subject=$res->field_value(0);
-            $code=sprintf('topic%d',$subject);
-            if(isset($_POST[$code]) && $_POST['file_name'])
-            {
-                $dbt->subjects = $subject;
-            }
-        }
-
-        $dbase->close();
+      $dbt->subjects=explode('%0D',$_POST['tags']);
     }
-
     //\Database\storeTransaction($dbt);
     //$drive_url=sprintf('drive_client.php?action=upload&store_code=%s&file_name=%s',$_POST['store'],urlencode($_POST['file_name']));
     //header('Location: ' . $drive_url);
-  try
-  {
-    \Logs\logDebug('commit transaction');
-    $dbt->commit();
-    header('Location: home.php?bookid=' . $dbt->bookid);
-  }
-  catch(\Exception $e)
-  {
-    $errid=\Logs\logException($e);
-    header('Location: home.php?errid=' . $errid);
-  }
+    try
+    {
+      \Logs\logDebug('commit transaction');
+      $dbt->commit();
+      header('Location: home.php?bookid=' . $dbt->bookid);
+    }
+    catch(\Exception $e)
+    {
+      $errid=\Logs\logException($e);
+      header('Location: home.php?errid=' . $errid);
+    }
 }
 
 
@@ -310,7 +299,11 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     
     \Logs\logDebug($_POST['tags']);
   
-    $subjects=explode('%0D',$_POST['tags']);
+    $subjects=array();
+    if(isset($_POST['tags']))
+    {
+       $subjects=explode('%0D',$_POST['tags']);
+    }
     foreach($subjects as $subject)
     {
       if(strlen($subject)>0)

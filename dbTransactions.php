@@ -4,6 +4,7 @@ namespace Database\Transactions;
 
 include_once "db.php";
 include_once "Log.php";
+include_once "utils.php";
 
 abstract class Transaction
 {
@@ -108,7 +109,15 @@ class CreateBook extends Transaction
 
             foreach($this->subjects as $subject)
             {
-                $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES ($subject,$id)");
+								$subject_id=\utils\selectOrCreateSubject($dbase,$subject);
+								if($subject_id>0)
+								{
+	                $dbase->query("INSERT INTO BOOKS_SUBJECTS_ASSOC (SUBJECT_ID,BOOK_ID) VALUES ($subject_id,$id)");								
+								}
+								else
+								{
+									\Logs\logDebug('cannot get subjects id for \'' . $subject . '\'');
+								}
             }
 
             $res=$dbase->query("SELECT ID FROM FILE_STORE WHERE VENDOR_CODE='$vendor'");
@@ -148,6 +157,7 @@ class DeleteBook extends Transaction
              $dbase->query("DELETE FROM BOOKS WHERE ID=$bookid");
              $dbase->query("DELETE FROM BOOKS_LINKS WHERE BOOK_ID=$bookid");
              $dbase->query("DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$bookid");
+					 	 $dbase->query("DELETE FROM IT_SUBJECT WHERE ID NOT IN (SELECT SUBJECT_ID FROM BOOKS_SUBJECTS_ASSOC) AND PERMANENT=0");
              $dbase->close();
          }
     }

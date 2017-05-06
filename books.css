@@ -270,8 +270,8 @@ a.label:focus {
     display: block;
 }
 
-.dropdown-content a:hover {background-color: #f1f1f1}
-.dropdown-content a.focused {background-color: #f1f1f1}
+.dropdown-content a:hover {background-color: #5bc0de; color: white;}
+.dropdown-content a.focused {background-color: #5bc0de; color: white;}
 /* log view*/
 body.logview
 {
