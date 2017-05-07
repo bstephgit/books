@@ -42,10 +42,15 @@ function searchEntries(input,callback)
     if(entries.length===0)
     {
       console.log('searchEntries entries.length == 0',input);
-      var req = make_request({ method:'GET',url:'store.php?action=taglist&tag=' + encodeURIComponent(input),
-                             onload: function(e){ entries.length=0; Array.prototype.push.apply(entries,JSON.parse(req.response)); callback(buildlist()); },
-                             onerror:  function (e) { console.error(e); } });
-      req.send();
+      var self=this;
+      if(self._req===undefined)
+      {
+         var req = make_request({ method:'GET',url:'store.php?action=taglist&tag=' + encodeURIComponent(input),
+                               onload: function(e){ delete self._req; entries.length=0; Array.prototype.push.apply(entries,JSON.parse(req.response)); callback(buildlist()); },
+                               onerror:  function (e) {delete self._req; console.error(e); } });
+        self._req=req;
+        req.send(); 
+      }
     }
     else
     {

@@ -120,7 +120,7 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
                     {
                         $sep="";
                         while($rec->next()){
-                            echo $sep . '<a class="nav_element" href="home.php?subject=' . $rec->field_value('ID') . '">' .  $rec->field_value('NAME') . "</a>";
+                            echo $sep . '<a class="nav_element" id="subjects" href="home.php?subject=' . $rec->field_value('ID') . '">' .  $rec->field_value('NAME') . "</a>";
                             $sep=", ";
                         }
                     }
@@ -153,7 +153,7 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
                 {
                     $query_str="SELECT TITLE,YEAR,DESCR,AUTHORS,SIZE,IMG_PATH FROM BOOKS WHERE ID=$id";
                     $rec=$dbase->query($query_str);
-                    $subjects=$dbase->query('SELECT NAME FROM IT_SUBJECT WHERE ID IN (SELECT SUBJECT_ID FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID='.$id.')');
+                    $subjects=$dbase->query('SELECT ID,NAME FROM IT_SUBJECT WHERE ID IN (SELECT SUBJECT_ID FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID='.$id.') ORDER BY NAME');
                     $links=$dbase->query('SELECT lnks.FILE_ID,lnks.FILE_SIZE,fs.VENDOR FROM BOOKS_LINKS AS lnks, FILE_STORE AS fs WHERE lnks.BOOK_ID=' . $id . ' AND fs.ID=lnks.STORE_ID');
                     \utils\print_book($rec,$subjects,$links);
                     $dbase->close();

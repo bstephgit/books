@@ -61,6 +61,11 @@ div.nav
     border: 2px solid yellow;
     position: absolute;
 }
+#subjects
+{
+  font-size: 0.8em;
+}
+
 div.banner
 {
     height:180px;
@@ -237,12 +242,13 @@ a.label:focus {
 }
 .display
 {
-    /*border: 2px solid black;*/
+    border: 3px solid gray;
     width: 210px;
-    height: 350px;
+    height: 150px;
     margin-top: 20px;
     background-color: #d8d8d8;
     border-radius: .25em;
+    background-image: url(metall_texture_elements_background.jpg);
 }
 .edit
 {
