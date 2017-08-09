@@ -71,7 +71,7 @@ function logInfo($msg)
 
 function logErr($msg)
 {
-  if(Config::instance()->insLogLevelEnough(Config::ERROR))
+  if(Config::instance()->isLogLevelEnough(Config::ERROR))
   {
     return logBase(Config::ERROR,$msg);
   }

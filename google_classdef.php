@@ -33,11 +33,11 @@ class GoogleDriveHelper extends Drive\Client
         parent::__construct();
         $this->buildAuth();
     }
-	public function setFileName($file_name)
-	{
-		$this->drive_file->setName($file_name);
-        parent::setFileName($file_name);
-	}
+		public function setFileName($file_name)
+		{
+			$this->drive_file->setName($file_name);
+			parent::setFileName($file_name);
+		}
     public function getDriveVendorName()
     {
         return GOOGLE_;
@@ -151,20 +151,20 @@ class GoogleDriveHelper extends Drive\Client
     {
         if($this->isLogged())
         {
-		    $file_name = $this->drive_file->getName();
-		    $this->drive_file->setParents( array($this->getDestFolder("Books")->getId()) );
-		    //$this->drive_file->setDescription('uploaded from server');
-		    //$this->drive_file->setSize(filesize('temp/'.$file_name));
-		    $size_mo = $this->drive_file->getSize() / (1024*1024);
-            $res=null;
-		    if($size_mo>5)
-		    {
-			    $res=$this->uploadMultipart();
-		    }
-		    else
-		    {
-			    $res=$this->uploadSimple();
-		    }
+						$file_name = $this->drive_file->getName();
+						$this->drive_file->setParents( array($this->getDestFolder("Books")->getId()) );
+						//$this->drive_file->setDescription('uploaded from server');
+						//$this->drive_file->setSize(filesize('temp/'.$file_name));
+						$size_mo = $this->drive_file->getSize() / (1024*1024);
+								$res=null;
+						if($size_mo>5)
+						{
+							$res=$this->uploadMultipart();
+						}
+						else
+						{
+							$res=$this->uploadSimple();
+						}
             if($res->error)
             {
                 throw new \Exception('upload error: ' . $res->error);
@@ -189,7 +189,7 @@ class GoogleDriveHelper extends Drive\Client
                     'download' => array( 'method' => 'GET', 'url' => $root_url . '/files/{fileid}?alt=media', 'headers' => array('Authorization: Bearer {accesstoken}')), 
                     'upload' => array('method' => 'POST', 'url' => $upload_url . '/files?uploadType=multipart', 
 																			'headers' => array('Authorization: Bearer {accesstoken}'),
-																			'body' => array( 'metadata' => array('data' => '{ "name": "{filename}", "parents": ["{parentid}"] }','type'=>'application/json'), 'file' => '{filecontent}')),
+																			'body' => array( 'metadata' => array('data' => array('name' => '{filename}', 'parents' => array('{parentid}')),'type'=>'application/json; charset=UTF-8'), 'file' => '{filecontent}')),
                     'delete' => array( 'method' => 'DELETE', 'url' => $root_url . '/files/{fileid}') )
             );
     }
@@ -286,6 +286,59 @@ class GoogleDriveHelper extends Drive\Client
 			$file=$file->current();
 		}
 		return $file;
+	}
+	protected function reparent()
+	{
+		$folderid=$this->getDestFolder("Books")->getId();
+		$dbase=\Database\odbc()->connect();
+		if($dbase)
+		{
+			$sql='SELECT BOOK_ID, FILE_ID, FILE_NAME FROM BOOKS_LINKS WHERE STORE_ID=1';
+			$rec=$dbase->query($sql);
+			if($rec)
+			{
+				$count=0;
+				while($rec->next())
+				{
+					$fid=$rec->field_value('FILE_ID');
+					$fname=$rec->field_value('FILE_NAME');
+				
+					$fileobj=$this->google_drive_service->files->get($fid,array('fields'=>'id,name,parents'));
+					if($fileobj)
+					{	
+						if(array_search($folderid,$fileobj->parents)===false)
+						{
+							\Logs\logDebug('Bad parents: database_name=\'' . $fname . '\' file_id=\'' . $fid . '\' google_name=\'' . $fileobj->name . '\' parents=' . var_export($fileobj->parents,true));
+							
+							$newfileobj=new Google_Service_Drive_DriveFile();
+							$newfileobj->setName($fname);
+							$this->google_drive_service->files->update($fid,$newfileobj,array( 'addParents'=> $folderid, 'removeParents'=> implode(',',$fileobj->parents) ));
+							$count++;
+						}
+						else if(count($fileobj->parents)>1)
+						{
+							\Logs\logDebug('Too much parents: database_name=\'' . $fname . '\' file_id=\'' . $fid . '\' google_name=\'' . $fileobj->name . '\' parents=' . var_export($fileobj->parents,true));
+							$newfileobj=new Google_Service_Drive_DriveFile();
+							$newfileobj->setName($fname);
+							$this->google_drive_service->files->update($fid,$newfileobj,array( 'removeParents'=> implode(',',array_diff( $fileobj->parents , array($folderid) ) )));
+							$count++;						
+						}
+					}
+					else
+					{
+						\Logs\logWarning('File not found. Id=' . $fid);
+					}
+				}
+			}
+			else
+			{
+				\Logs\logWarning('No record found');
+			}
+			\Logs\logInfo($count . ' file(s) to reparent.');
+			$dbase->close();
+		}
+		
+		
 	}
 }
 

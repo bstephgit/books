@@ -255,6 +255,77 @@ class PCloudDrive extends Drive\Client
         return $response->metadata;
     }
 		public function useDownloadProxy() { return true; }
+		
+		protected function reparent()
+		{
+			$folderid=$this->getBookFolder()->folderid;
+			\Logs\logDebug('PCloud Book folder id=' . var_export($folderid,true));
+			$dbase=\Database\odbc()->connect();
+			if($dbase)
+			{
+				$sql='SELECT ID,BOOK_ID, FILE_ID, FILE_NAME FROM BOOKS_LINKS WHERE STORE_ID=5';
+				$rec=$dbase->query($sql);
+				if($rec)
+				{
+					$count=0;
+					while($rec->next())
+					{
+						$fid=$rec->field_value('FILE_ID');
+						$fname=$rec->field_value('FILE_NAME');
+
+						$url= self::API_URL . '/checksumfile?fileid=' . $fid;
+						$options=array(
+										CURLOPT_HTTPHEADER => array(
+												'Authorization: Bearer ' . $this->getAccessToken()
+										)
+								);
+            $fileobj=json_decode($this->curl_request($url,$options));;
+						if(property_exists($fileobj,'sha1'))
+						{	
+							if($fileobj->metadata->parentfolderid!=$folderid)
+							{
+								\Logs\logDebug('Bad parents: database_name=\'' . $fname . '\' file_id=\'' . $fid . '\' pcloud_name=\'' . $fileobj->metadata->name . '\' parent=' . var_export($fileobj->metadata->parentfolderid,true));
+
+								$url= self::API_URL . '/copyfile?fileid=' . $fid . '&tofolderid=' . $folderid . '&toname=' . urlencode($fname);
+								$res=$this->curl_request($url,$options);
+								\Logs\logDebug('copyfile result: ' . $res);
+								$copyfile = json_decode($res);
+								if(property_exists($copyfile,'result') && $copyfile->result===0)
+								{
+									$copyfile = $copyfile->metadata;
+									$url= self::API_URL . '/deletefile?fileid=' . $fid;
+									
+									$res=json_decode($this->curl_request($url,$options));
+									if( !property_exists($res,'result') || $res->result!==0)
+									{
+										\Logs\logWarning('file id=' . $fid . ' name=\'' . $fname . '\' cannot be deleted on store');
+									}
+									
+									$sql = 'UPDATE BOOKS_LINKS SET FILE_ID=\'' . $copyfile->fileid . '\' WHERE ID=' . $rec->field_value('ID');
+									\Logs\logDebug($sql);
+									$dbase->query($sql);
+								}
+								else
+								{
+									\Logs\logErr('file id=' . $fid . ' name=\'' . $fname . '\' not copied: ' . $res);
+								}
+								$count++;
+							}
+						}
+						else
+						{
+							\Logs\logWarning('File not found. Id=' . $fid . ' error=' . json_encode($fileobj));
+						}
+					}
+				}
+				else
+				{
+					\Logs\logWarning('No record found');
+				}
+				\Logs\logInfo($count . ' file(s) to reparent.');
+				$dbase->close();
+			}
+	}
 }
     
     ?>

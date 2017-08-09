@@ -63,7 +63,8 @@ abstract class Client
     public function isLogged() { return ($this->getAccessToken() && !$this->isExpired()); }
     public function getAccessToken() { if($this->token) return $this->token->access_token; return null; }
     public function useDownloadProxy() { return false; }
-  
+    protected function reparent() { throw new \Exception('Reparent not implemented for store ' . $this->getDriveVendorName()); }
+
     protected abstract function uploadFile();
     protected abstract function downloadFile();
     protected abstract function deleteFile();
@@ -168,6 +169,10 @@ abstract class Client
                 break;
             case 'downloadLink':
                 header('Location: store.php?action=downloadLink&bookid='. $this->getBookId().'&html=true');
+                break;
+          case 'reparent':
+                $this->reparent();
+                header('Location: logview.php');
                 break;
             default:
                 throw new \Exception('Unknown action: ' . $this->action);

@@ -202,7 +202,7 @@ Store.prototype.upload = function (file) {
 		{
 			if(body[dataname]==='{filecontent}')
 			{
-				formData.append(dataname, file);
+				formData.append(dataname, file, file.name);
 			}
 			else
 			{
@@ -355,6 +355,7 @@ Store.prototype.download = function()
 			req.setRequestHeader(parts[0],parts[1]);
 		}
 	}	
+	
 	req.send();
 
 }
