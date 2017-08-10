@@ -305,6 +305,7 @@ Store.prototype.download = function()
     	a.href = window.URL.createObjectURL(req.response); // xhr.response is a blob
     	a.download = filename; // Set the file name.
     	a.style.display = 'none';
+			a.type=getMimeType(filename);
     	document.body.appendChild(a);
     	a.click();
 		}
@@ -739,4 +740,32 @@ function getImgContent(imgobj)
 		content=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
 	}
 	return content;
+}
+
+function getMimeType(filename)
+{
+	var ext='';
+	var index = filename.lastIndexOf('.');
+	if(index>-1)
+	{
+		ext=filename.toString().substring(index);
+	}
+	switch(ext.toLowerCase())
+	{
+		case '.pdf':
+			return 'application/pdf';
+		case '.epub':
+			return 'application/epub';
+		case '.chm':
+			return 'application/x-chemdraw';
+		case '.rar':
+			return 'application/x-rar-compressed, application/octet-stream';
+		case '.zip':
+			return 'application/zip, application/octet-stream';
+		case '.htm':
+		case '.html':
+			return 'text/html';
+		default:
+			return 'application/octet-stream';
+	}
 }
