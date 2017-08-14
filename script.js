@@ -263,6 +263,7 @@ Store.prototype.download = function()
 	var upload_bar = document.getElementById('upl-in1');
 	var token = this.store_info.access_token;
 	var self=this;
+	self.total_loaded=0;
 	
 	function doerror(err)
 	{
@@ -285,10 +286,10 @@ Store.prototype.download = function()
 	
 	function onprogress(e)
 	{
-		var total=0.0; 
-		if(e.total>0) { total = e.total; } else {  total = filesize; }
-		upload_bar.style.width = ((e.loaded / total)*100).toString() + "%";
-		
+		//var total=0.0; 
+		//if(e.total>0) { total = e.total; } else {  total = filesize; }
+		//upload_bar.style.width = ((e.loaded / total)*100).toString() + "%";
+		upload_bar.style.width = (((self.total_loaded+e.loaded) / filesize)*100).toString() + "%";
 		//console.log('%o',e, percent , e.loaded, e.total);
 	}
 	
@@ -297,17 +298,86 @@ Store.prototype.download = function()
 	
 	function handler()
 	{
-		document.getElementById('upload-out').style.visibility = 'hidden';
-		
-		if(req.status<400)
+		function savefile(blob)
 		{
+			document.getElementById('upload-out').style.visibility = 'hidden';
 			var a = document.createElement('a');
-    	a.href = window.URL.createObjectURL(req.response); // xhr.response is a blob
+			console.log(blob.size);
+    	a.href = window.URL.createObjectURL(blob); // xhr.response is a blob
     	a.download = filename; // Set the file name.
     	a.style.display = 'none';
 			a.type=getMimeType(filename);
     	document.body.appendChild(a);
     	a.click();
+		}
+		if(req.status<400)
+		{
+			if(req.status===206)//partial
+			{
+				var content_length = 0;
+				var range_left=0;
+				var range_right=0;
+				var total_length=0;
+				
+				if(!this.ranges)
+				{
+					this.ranges=[];
+				}
+				
+				if(req.getResponseHeader('Content-Length'))
+				{
+					content_length = parseInt(req.getResponseHeader('Content-Length'));
+					self.total_loaded += content_length;
+				}
+				if(req.getResponseHeader('Content-Range'))
+				{
+					var regx = /bytes\s+(\d+)-(\d+)\/(\d+)/;
+					var match = req.getResponseHeader('Content-Range').match(regx);
+					range_left=parseInt(match[1]);
+					range_right=parseInt(match[2]);
+					total_length=parseInt(match[3]);
+				}
+				console.log('Range: ',range_left,range_right,'/',total_length);
+				
+				this.ranges.push(req.response);
+				
+				if(range_right+1===total_length)
+				{
+					var blob = new Blob(this.ranges)
+					console.log( 'Nb ranges', this.ranges.length,'size',blob.size);
+					savefile(blob);
+				}
+				else
+				{
+					var download = self.store_info.downloadLink;
+					var range = 'bytes=' + (range_right+1).toString() + '-' + (Math.min(range_right+content_length,total_length-1)).toString();
+					var url = download.url;
+					
+					console.log('send request for Range', range);
+					req.open( download.method, url, true );
+
+					console.log('download url',url);
+
+					if(download.headers)
+					{
+						for(var i in download.headers)
+						{
+							console.log('set header', download.headers[i]);
+							var parts = download.headers[i].split(':');
+							req.setRequestHeader(parts[0],parts[1]);
+						}
+					}
+					
+					req.setRequestHeader('Range', range);
+					
+					req.send();
+					return;
+				}
+			}
+			else
+			{
+				savefile(req.response);
+			}
 		}
 		else
 		{
@@ -355,10 +425,8 @@ Store.prototype.download = function()
 			var parts = download.headers[i].split(':');
 			req.setRequestHeader(parts[0],parts[1]);
 		}
-	}	
-	
+	}
 	req.send();
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

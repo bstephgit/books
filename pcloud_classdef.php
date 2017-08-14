@@ -175,7 +175,7 @@ class PCloudDrive extends Drive\Client
             'urls' => array('download' =>array( 'method' => 'GET', 'url' => $base_url. '/getfilelink?fileid={fileid}&access_token={accesstoken}&forcedownload=1' ), 
                             'upload' => array( 'method' => 'POST', 'url' => $base_url . '/uploadfile?access_token={accesstoken}',
                                                'body' =>array ( 'filename' => '{filename}',
-                                                                'folderid' => '{parentid}',
+                                                                'folderid' => $book_folder->folderid,
                                                                 'nopartial' => 1,
                                                                 'data' => '{filecontent}' ) ),
                             'delete' => array( 'method' => 'GET', 'url' => $base_url . '/deletefile?fileid={fileid}') )
