@@ -298,15 +298,15 @@ Store.prototype.download = function()
 	
 	function handler()
 	{
-		function savefile(blob)
+		function savefile(blob_array)
 		{
 			document.getElementById('upload-out').style.visibility = 'hidden';
 			var a = document.createElement('a');
-			console.log(blob.size);
-    	a.href = window.URL.createObjectURL(blob); // xhr.response is a blob
+			var mime_type = getMimeType(filename);
+    	a.href = window.URL.createObjectURL(new Blob(blob_array,{type: mime_type}));
     	a.download = filename; // Set the file name.
     	a.style.display = 'none';
-			a.type=getMimeType(filename);
+			a.type=mime_type;
     	document.body.appendChild(a);
     	a.click();
 		}
@@ -343,9 +343,8 @@ Store.prototype.download = function()
 				
 				if(range_right+1===total_length)
 				{
-					var blob = new Blob(this.ranges)
-					console.log( 'Nb ranges', this.ranges.length,'size',blob.size);
-					savefile(blob);
+					console.log( 'Nb ranges', this.ranges.length);
+					savefile(this.ranges);
 				}
 				else
 				{
@@ -367,16 +366,14 @@ Store.prototype.download = function()
 							req.setRequestHeader(parts[0],parts[1]);
 						}
 					}
-					
 					req.setRequestHeader('Range', range);
-					
 					req.send();
 					return;
 				}
 			}
 			else
 			{
-				savefile(req.response);
+				savefile([req.response]);
 			}
 		}
 		else
@@ -406,7 +403,7 @@ Store.prototype.download = function()
 	else
 	{
 		req.onload = handler;
-		req.responseType = 'blob';
+		req.responseType = 'blob'; // xhr.response is a blob
 		upload_bar.style.width = '0%';
 		document.getElementById('upload-out').style.visibility = 'visible';
 	}

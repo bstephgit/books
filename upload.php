@@ -266,7 +266,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
         else
         {
           $img_path=img_dir($img_basename) . '/img.png';
-          \Logs\logDebug($img_path);
+          \Logs\logDebug("new img path: ".$img_path);
           $update_query = $update_query . ', IMG_PATH=\'' . mysqli_real_escape_string($con,$img_path) . '\'';
         }
         if(strlen($img_path))
@@ -290,7 +290,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     }else {  
       \Logs\logDebug(sprintf("imgfile=%d imgflag=%s",isset($_POST['imgfile']), $imgflag)); 
     }
- 
+    \Logs\logDebug("update query: " . $update_query . " WHERE ID=$id");
     $res=$dbase->query($update_query . " WHERE ID=$id");
     
     $dbase->query("DELETE FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID=$id");

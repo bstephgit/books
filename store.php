@@ -84,7 +84,7 @@ if($action==='login')
     $client=checkLogin($store);
     if($client)
     {
-      $info=json_encode($client->store_info());
+      $info=json_encode($client->store_info(),JSON_UNESCAPED_SLASHES );
       if($html==='true') //browser is wating html code to process login info
       {
           $info=sprintf($html_response,$info);
@@ -130,7 +130,7 @@ if($action==='downloadLink')
         $link=(object)$client->downloadLink($fileid);
         if($client->useDownloadProxy())
         {
-          $link->url='proxy.php?action=download&url=' . base64_encode($link->url);
+          $link->url='proxy.php?action=download&url=' . base64_encode($link->url) . '&filesize=' . $file_size;
           array_push($link->headers,"Authorization: Basic " . base64_encode('b13_17778490:tecste1'));
           array_push($link->headers,"Store-Token: $access_token");
         }
@@ -182,5 +182,28 @@ if($action==='taglist' && strlen($tag)>0)
   $dbase->close();
   \Logs\logDebug(json_encode($res));
   echo json_encode($res);
+}
+if($action==='newtag' && strlen($tag)>0)
+{
+  $dbase=\Database\odbc()->connect();
+ 
+  $res='';
+  $tag=strtoupper($tag);
+  $sql='SELECT ID FROM IT_SUBJECT WHERE NAME=\'' . $tag . '\'';
+  $rec=$dbase->query($sql);
+  if($rec->next())
+  {
+    $res = json_encode((object)array('id' => $rec->field_value('ID'),'name' => $rec->field_value('NAME')));
+    \Logs\logWarning('Tag \'' . $tag . '\' already created');
+  }
+  else
+  {
+    $dbase->query('INSERT INTO IT_SUBJECT (NAME) VALUES(\''. $tag .'\')');
+    $rec=$dbase->query($sql);
+    \Logs\logInfo('Create tag \'' . $tag . '\'');
+    $res = json_encode((object)array('id' => $rec->field_value('ID'),'name' => $rec->field_value('NAME')));
+  }
+  $dbase->close();
+  echo $res;
 }
 ?>

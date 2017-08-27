@@ -172,7 +172,7 @@ function buildEntries(input)
     {
         var a = document.createElement('a');
         a.innerText = list[i].name;
-        a.href = '#';
+        a.href = 'javascript:void(0)';
         a.id = '#' + list[i].id;
         a.onclick = function(){
             addTag(this.innerText,this.id.replace(/^#/,'')); 

@@ -73,12 +73,19 @@ if($action==='download')
       {
         \Logs\logError('Bad file size parameter: \'' . $_GET['filesize'] . '\'');
       }
+      else
+      {
+        \Logs\logInfo('Content-Length: ' . strval($filesize));
+        header('Content-Length: ' . strval($filesize));
+      }
     }
     else
     {
       \Logs\logWarning('No file size provided in url parameter.');
     }
     \Logs\logDebug('access_token=' . $tokenid);
+    
+    header('Content-Type: application/octet-stream');
     
     $curl = curl_init();
     //$out = fopen('php://output', 'w');
