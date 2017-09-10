@@ -1,3 +1,7 @@
+function getCurrentEditText()
+{
+  return document.getElementById('currenteditable').innerText;
+}
 function getList()
 {
   if(this.entries===undefined)
@@ -30,7 +34,7 @@ function searchEntries(input,callback)
     var buildlist = function ()
     {
       var res = [];
-      var input_lower = input.toLowerCase();
+      var input_lower = getCurrentEditText().toLowerCase();
       for (var i in entries) 
       { 
           var idxof = entries[i].name.toLowerCase().indexOf(input_lower); 
@@ -142,7 +146,7 @@ function onkey(event)
       default:
       {
           console.log('keyup',event.keyCode);
-          buildEntries(document.getElementById('currenteditable').innerText);
+          buildEntries(getCurrentEditText());
       }
   }
   return true;

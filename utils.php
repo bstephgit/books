@@ -138,7 +138,7 @@ function print_book($rec,$subjects,$links)
         printf("<td width='210px' valign='top' rowspan='2'><img src=\"%s\" class='book'><div class='book'>Tags:</div><div class='tags display'>",/*str_replace("'","\\'",*/$img_src/*)*/);
         while($subjects->next())
         {
-          printf('<span class="tag label label-info"><span style="cursor: hand" onclick="window.location=\'home.php?subject=%s\';">%s</span></span>',$subjects->field_value('ID'),$subjects->field_value('NAME'));
+          printf('<span class="tag label label-info"><span style="cursor: pointer" onclick="window.location=\'home.php?subject=%s\';">%s</span></span>',$subjects->field_value('ID'),$subjects->field_value('NAME'));
         }
         echo "</div></td>";
         //printf("<td width='210px' valign='top'><img src=\"%s\" class='book'></td>",/*str_replace("'","\\'",*/$img_src/*)*/);
@@ -205,11 +205,11 @@ function printFooterLinks()
          $sep='';
          while($tok!=false)
          {
-           $search_regex = $search_regex . $sep . $tok;
-           $sep = '|';
+           $search_regex = $search_regex . $sep . escapeRegExpChars ($tok);
+           $sep = '[[:blank:]]+';
            $tok = strtok(' ');
          }
-         $search_regex=escapeRegExpChars (mysqli_real_escape_string($dbase->con(),$search_regex));
+         $search_regex=mysqli_real_escape_string($dbase->con(),$search_regex);
          $sql="SELECT COUNT(*) FROM BOOKS WHERE TITLE REGEXP '$search_regex'";
          \Logs\logInfo($sql);
        }
