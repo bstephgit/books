@@ -205,11 +205,10 @@ function printFooterLinks()
          $sep='';
          while($tok!=false)
          {
-           $search_regex = $search_regex . $sep . escapeRegExpChars ($tok);
+           $search_regex = $search_regex . $sep . escapeRegExpChars(mysqli_real_escape_string($dbase->con(),$tok));
            $sep = '[[:blank:]]+';
            $tok = strtok(' ');
          }
-         $search_regex=mysqli_real_escape_string($dbase->con(),$search_regex);
          $sql="SELECT COUNT(*) FROM BOOKS WHERE TITLE REGEXP '$search_regex'";
          \Logs\logInfo($sql);
        }
@@ -225,6 +224,7 @@ function printFooterLinks()
        $page_max=intval(ceil($count/$nb_elem));
        $page=min($page,$page_max);
 
+      \Logs\logInfo('count=' . strval($count));
       if($has_subject)
       {
         $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE ID IN (SELECT BOOK_ID FROM BOOKS_SUBJECTS_ASSOC WHERE SUBJECT_ID=$subject) ORDER BY ID LIMIT $nb_elem OFFSET $offset";
