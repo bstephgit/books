@@ -39,7 +39,7 @@ if($edit)
       <tr><td>Titre<br> <input type="text" name="title" size="40"> </td>
       <td>Auteur<br> <input type="text" name="author"> </td>
       <td>Ann&eacute;e de parution<br> <input type="text" name="year"></td></tr> 
-      <tr><td colspan="3">Description<br><textarea rows="5" cols="90" name="descr"></textarea></td></tr>
+      <tr><td colspan="3">Description<br><textarea rows="5" cols="90" name="descr">&lt;div class=&quot;scrollable&quot;&gt;&lt;/div&gt;</textarea></td></tr>
 
   </table>
   <?php if($upload){ ?>
