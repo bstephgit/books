@@ -110,7 +110,7 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
     <div class='internal'>
         <div class='navtitle'><h3>Sujets</h3></div>
         <div class="nav_elements">
-            <div>
+            <div class='scrollable'>
             <?php 
                 $base=Database\odbc()->connect();
                 if($base && $base->is_connected())
