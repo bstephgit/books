@@ -268,10 +268,13 @@ Store.prototype.download = function()
 	function doerror(err)
 	{
 		var callback=self.onerror;
+		document.getElementById('upload-out').style.visibility = 'hidden';
+		document.getElementById('btnDownload').disabled = false;
 		if(callback) 
 		{
+			console.error((typeof err).toString());
 			if (typeof err !== "Error"){
-				console.error(req.response);
+				console.error(err);
 				var err_ = new Error("error downloading file");
 				
 				if(err.status!==undefined) { err_.status = err.status; err_.response=err.response; }
@@ -298,9 +301,11 @@ Store.prototype.download = function()
 	
 	function handler()
 	{
+		document.getElementById('btnDownload').disabled = false;
+		document.getElementById('upload-out').style.visibility = 'hidden';
+		
 		function savefile(blob_array)
 		{
-			document.getElementById('upload-out').style.visibility = 'hidden';
 			var a = document.createElement('a');
 			var mime_type = getMimeType(filename);
     	a.href = window.URL.createObjectURL(new Blob(blob_array,{type: mime_type}));
@@ -406,6 +411,7 @@ Store.prototype.download = function()
 		req.responseType = 'blob'; // xhr.response is a blob
 		upload_bar.style.width = '0%';
 		document.getElementById('upload-out').style.visibility = 'visible';
+		document.getElementById('btnDownload').disabled = true;
 	}
 	
 	var download = this.store_info.downloadLink;

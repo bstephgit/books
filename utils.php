@@ -155,7 +155,7 @@ function print_book($rec,$subjects,$links)
         {
            $size=$links->field_value('FILE_SIZE');
            $vendor=$links->field_value('VENDOR');
-           echo sprintf("<div class='book'><button class='nav_element' onclick='downloadFile(%s);'>Download</button> %s octets (%s)</div>",$_GET['bookid'],$size,$vendor);
+           echo sprintf("<div class='book'><button id='btnDownload' class='nav_element' onclick='downloadFile(%s);'>Download</button> %s octets (%s)</div>",$_GET['bookid'],$size,$vendor);
            //echo sprintf("<div class='book'><a class='nav_element' href='upload.php?action=download&bookid=%s'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
         }
         echo '</td>';
