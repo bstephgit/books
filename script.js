@@ -301,13 +301,15 @@ Store.prototype.download = function()
 	
 	function handler()
 	{
-		document.getElementById('btnDownload').disabled = false;
-		document.getElementById('upload-out').style.visibility = 'hidden';
-		
 		function savefile(blob_array)
 		{
 			var a = document.createElement('a');
 			var mime_type = getMimeType(filename);
+			
+			//refresh UI
+			document.getElementById('btnDownload').disabled = false;
+			document.getElementById('upload-out').style.visibility = 'hidden';
+			
     	a.href = window.URL.createObjectURL(new Blob(blob_array,{type: mime_type}));
     	a.download = filename; // Set the file name.
     	a.style.display = 'none';
