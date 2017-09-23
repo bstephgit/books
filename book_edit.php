@@ -66,11 +66,30 @@ if($edit)
           <td>
             <div class="nav_elements">
               <p>Store<br>
+<!--
               <input type="radio" name="store" value="GOOG" checked> Google drive<br>
               <input type="radio" name="store" value="MSOD"> MS OneDrive<br>
               <input type="radio" name="store" value="AMZN"> Amazon<br>
               <input type="radio" name="store" value="BOX"> Box.com<br>
               <input type="radio" name="store" value="PCLD"> pCloud  </p>
+-->
+            <?php 
+                  $oneGo = pow(1024,3);
+                  $stores=$base->query('SELECT * FROM FILE_STORE');
+                  while($stores->next())
+                  {
+                    $capacity = floatval($stores->field_value('STORAGE_CAPACITY') * $oneGo);
+                    $store_id = $stores->field_value('ID');
+                    $vendor = ucwords(strtolower($stores->field_value('VENDOR')));
+                    $vendor_code = $stores->field_value('VENDOR_CODE');
+                    
+                    $sumrec=$base->query('SELECT SUM(FILE_SIZE) FROM BOOKS_LINKS WHERE STORE_ID=' . $store_id);
+                    $sumrec->next(true);
+                    $sumfiles = floatval($sumrec->field_value(0));
+                    echo sprintf( '<input type="radio" name="store" value="%s"> %s (%02.2f%% used)<br>', $vendor_code, $vendor, ($sumfiles/$capacity*100.0) );
+                  }
+            ?>
+                </p>
             </div>
          </td>
           <td width='500' align='right'><canvas id="preview" width="250" height="280" style="border:1px solid #000000;"></canvas></td>
