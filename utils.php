@@ -253,9 +253,11 @@ function printFooterLinks()
                  $charcount += 1;
              }
              if($index<strlen($title))
-              $title= sprintf('<abbr title="%s">%s</abbr>...',$title,substr($title,0,$index));
-             printf('<table class="book_list"><tr><td><img src="%s" class="book"></td></tr><tr><td><a class="nav_element" href="home.php?bookid=%s">%s</a></td></tr></table>',
-                encodePath($rec->field_value('IMG_PATH')),$rec->field_value('ID'),$title);
+             {
+               $title= sprintf('<abbr title="%s">%s</abbr>...',$title,substr($title,0,$index));
+             }
+             printf('<table class="book_list"><tr><td><a href="home.php?bookid=%s"><img src="%s" class="book"></a></td></tr><tr><td><a class="nav_element" href="home.php?bookid=%s">%s</a></td></tr></table>',
+                $rec->field_value('ID'),encodePath($rec->field_value('IMG_PATH')),$rec->field_value('ID'),$title);
            }
            echo '</div>';
        }
