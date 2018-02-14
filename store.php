@@ -1,26 +1,7 @@
 <?php
 
-include_once "amazon_classdef.php";
-include_once "box_classdef.php";
-include_once "google_classdef.php";
-include_once "onedrive_classdef.php";
-include_once "pcloud_classdef.php";
 include_once "db.php";
-
-function createDriveClient($drive_code)
-{
-    switch($drive_code)
-    {
-        case 'GOOG': return new \GoogleDriveHelper();
-        case 'MSOD': return new \MSOneDriveHelper();
-        case 'AMZN': return new \AmazonCloudHelper();
-        case 'BOX': return new \BoxDrive();
-        case 'PCLD': return new \PCloudDrive();
-            
-        default: throw new \Exception('Unknown code for store: ' . $drive_code);
-    }
-}
-
+include_once "utils.php";
 
 $html_response="<html><body>
     <script type='text/javascript'>
@@ -33,33 +14,6 @@ $html_response="<html><body>
 
 session_start();
 
-
-function checkLogin($vendor_store)
-{
-    \Logs\logDebug('checkLogin: start');
-    $client=createDriveClient($vendor_store);
-    \Logs\logDebug('checkLogin: client created');
-    if(!$client->isLogged())
-    {
-        if($client->isExpired())
-        {
-            \Logs\logDebug('checkLogin: expired');
-            try{
-                $client->refreshToken();
-                return $client;
-            }
-            catch(\Exception $e)
-            {
-                \Logs\logWarning($e->getMessage());
-            }
-        }
-        \Logs\logDebug('checkLogin: redirect');
-        echo json_encode( (object)array( 'redirect' => $client->getRedirectUrl() ) );
-        exit;
-    }
-    \Logs\logDebug('checkLogin: return client');
-    return $client;
-}
 
 $action='';
 $bookid='';
@@ -81,7 +35,7 @@ if($action==='login')
       echo '{"error":"no vendor store code"}';
       exit;
     }
-    $client=checkLogin($store);
+    $client=\utils\checkLogin($store);
     if($client)
     {
       $info=json_encode($client->store_info(),JSON_UNESCAPED_SLASHES );
@@ -122,7 +76,7 @@ if($action==='downloadLink')
       $file_size=$rec->field_value('FILE_SIZE');
       $vendor=$rec->field_value('VENDOR_CODE');
       
-      $client=checkLogin($vendor);
+      $client=\utils\checkLogin($vendor);
       if($client)
       {
         $access_token=$client->getAccessToken();
@@ -176,7 +130,7 @@ if($action==='taglist' && strlen($tag)>0)
   $res=array();
   while($rec->next())
   {
-    \Logs\logDebug('tag' . $rec->field_value('NAME'));
+    //\Logs\logDebug('tag ' . $rec->field_value('NAME'));
   array_push($res, (object)array('id'=>$rec->field_value('ID'),'name'=>$rec->field_value('NAME')));
   }
   $dbase->close();

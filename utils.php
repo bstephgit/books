@@ -4,6 +4,98 @@ namespace utils;
 include_once "db.php";
 include_once "Log.php";
 
+include_once "amazon_classdef.php";
+include_once "box_classdef.php";
+include_once "google_classdef.php";
+include_once "onedrive_classdef.php";
+include_once "pcloud_classdef.php";
+include_once "hubic_classdef.php";
+
+
+function createDriveClient($drive_code)
+{
+    switch($drive_code)
+    {
+        case 'GOOG': return new \GoogleDriveHelper();
+        case 'MSOD': return new \MSOneDriveHelper();
+        case 'AMZN': return new \AmazonCloudHelper();
+        case 'BOX': return new \BoxDrive();
+        case 'PCLD': return new \PCloudDrive();
+        case 'HUB': return new \HubicDrive();
+        default: throw new \Exception('Unknown code for store: ' . $drive_code);
+    }
+}
+
+function checkLogin($vendor_store)
+{
+    \Logs\logDebug('checkLogin: start');
+    $client=\utils\createDriveClient($vendor_store);
+    \Logs\logDebug('checkLogin: client created');
+    if(!$client->isLogged())
+    {
+        if($client->isExpired())
+        {
+            \Logs\logDebug('checkLogin: expired');
+            try{
+                $client->refreshToken();
+                return $client;
+            }
+            catch(\Exception $e)
+            {
+                \Logs\logWarning($e->getMessage());
+            }
+        }
+        \Logs\logDebug('checkLogin: redirect ' . $client->getRedirectUrl());
+        echo json_encode( (object)array( 'redirect' => $client->getRedirectUrl() ) );
+        exit;
+    }
+    \Logs\logDebug('checkLogin: return client');
+    return $client;
+}
+
+function curl_request($url, $options = array())
+{
+  $curl = curl_init();
+  $whole_options=array(
+      // General options.
+      CURLOPT_RETURNTRANSFER => true,
+      CURLOPT_AUTOREFERER    => true,
+
+      // SSL options.
+      CURLOPT_SSL_VERIFYHOST => false,
+      CURLOPT_SSL_VERIFYPEER => false,
+      CURLOPT_URL            => $url
+  );
+  if($options)
+  {
+      $whole_options=$whole_options + $options;
+  }
+  curl_setopt_array($curl, $whole_options);
+  $result = curl_exec($curl);
+
+  if (false === $result) {
+      curl_close($curl);
+      throw new \Exception('curl_exec() failed: ' . curl_error($curl));
+  }
+  $httpcode = intval(curl_getinfo($curl, CURLINFO_HTTP_CODE));
+  curl_close($curl);
+  
+  return array( 'code' => $httpcode, 'body' => $result);
+}
+
+function curl_post($url,$body,$options=array())
+{
+    $post_options=array(
+         CURLOPT_POST       => true,
+         CURLOPT_POSTFIELDS => $body
+     );
+    if($options)
+    {
+        $post_options=$options+$post_options;
+    }
+    return curl_request($url,$post_options);
+}
+
 function encodePath($path)
 {
   $count=strlen($path);
@@ -123,7 +215,7 @@ function print_subjects_tags($base,$subjects)
     }
 }
 
-function print_book($rec,$subjects,$links)
+function print_book($bookid,$rec,$subjects,$links)
 {
     if($rec && $rec->next())
     {
@@ -150,13 +242,24 @@ function print_book($rec,$subjects,$links)
         printf("<div class='book'>Auteur: <span>%s</span></div>",$author);
         printf("<div class='book'>Parution: <span>%s</span></div>",$year);
         printf("<div class='book'>File size: <span>%s</span></div>",sizeUnit($size));
-        printf("<div class='book'><span class='book_descr'>%s</span></div>",$descr);
+        printf("<div class='book'><span class='book_descr'>%s</span></div>",utf8_encode($descr));
         if($links && $links->next())
         {
            $size=$links->field_value('FILE_SIZE');
            $vendor=$links->field_value('VENDOR');
-           echo sprintf("<div class='book'><button id='btnDownload' class='nav_element' onclick='downloadFile(%s);'>Download</button> %s octets (%s)</div>",$_GET['bookid'],$size,$vendor);
-           //echo sprintf("<div class='book'><a class='nav_element' href='upload.php?action=download&bookid=%s'>Download</a> -- %s (%s)</div>",$_GET['bookid'],$size,$vendor);
+           $vcode=$links->field_value('VENDOR_CODE');
+          if(true/*($vcode==='PCLD' || $vcode==='BOX')*/)
+          {
+            echo sprintf("<div class='book'><button id='btnDownload' class='nav_element' onclick='downloadFile(%s);'>Download</button> %s octets (%s)</div>",$_GET['bookid'],$size,$vendor);
+          }
+          else
+          {
+            $client=\utils\checkLogin($vcode);
+            $fileid = $links->field_value('FILE_ID');
+            $download_link = $client->downloadLink($fileid)['url'];
+            echo sprintf("<div class='book'><button id='btnDownload' class='nav_element' onclick='javascript:window.open(\"%s\");'>Download</button> %s octets (%s)</div>",$download_link,$size,$vendor);
+          }
+           
         }
         echo '</td>';
         /*echo '<td><div class="book"><ul class="book_tags"><LH>Tags</LH>';
@@ -319,6 +422,84 @@ function selectOrCreateSubject($db,$subject_name)
     \Logs\logWarning('cannot get subject\'' . $subject_name . '\' from database.');
     return 0;
   }
+}
+
+function escapeJsonString($value) { # list from www.json.org: (\b backspace, \f formfeed)
+    $escapers = array("\\", "/", "\"", "\n", "\r", "\t", "\x08", "\x0c");
+    $replacements = array("\\\\", "\\/", "\\\"", "\\n", "\\r", "\\t", "\\f", "\\b");
+    $result = str_replace($escapers, $replacements, $value);
+    return $result;
+}
+
+function pdfGetImage($pdf_name,$img_content)
+{
+    $pdf_ext=".pdf";
+    $pos=strpos($pdf_name,$pdf_ext);
+    $img_name='';
+    $img_basename='';
+    if( $pos!=false && ($pos+strlen($pdf_ext))==strlen($pdf_name) )
+    {
+        $img_basename = '[' . basename($pdf_name,$pdf_ext) . ']';
+    }
+    else
+    {
+      \Logs\logInfo("'$pdf_name': not PDF file");
+      if(strlen($pdf_name)>0)
+      {
+        $img_basename= '[' . pathinfo($pdf_name)['filename'] . ']';
+      }
+      else
+      {
+        $img_basename = uniqid ();
+      }
+    }
+    try
+    {
+      $img_name = \utils\saveImageFile($img_basename,$img_content);
+       \Logs\logInfo("img='$img_name'");
+    }
+    catch(\Exception $e)
+    {
+      $errid=\Logs\logException($e);
+    }
+   
+    return $img_name;
+}
+
+function saveImageFile($dirname,$img_content)
+{
+  $img_name = '';
+  if(strlen($img_content)>0)
+  {
+      if(!is_dir(\utils\img_dir($dirname)))
+      {
+          if(mkdir(\utils\img_dir($dirname))===false)
+            throw new \Exception("cannot create directory");
+      }
+      else
+      {
+        \Logs\logWarning("dir '$dirname' already created");
+      }
+      $img_name = \utils\img_dir($dirname).'/img.png';
+      file_put_contents($img_name,base64_decode($img_content));
+  }
+  return $img_name;
+}
+
+function temp_dir($subpath=null)
+{
+    $temp_dir='temp';
+    if($subpath==null)
+        return $temp_dir;
+    return $temp_dir . '/' . $subpath;
+}
+
+function img_dir($subpath=null)
+{
+    $img_dir='img';
+    if($subpath==null)
+        return $img_dir;
+    return $img_dir . '/' . $subpath;
 }
 
 ?>

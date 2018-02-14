@@ -10,15 +10,21 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
   \Logs\logInfo('Set Cookie \'browse_backlink\' ' . $_SERVER['REQUEST_URI']);
   setcookie("browse_backlink",$_SERVER['REQUEST_URI']);
 }
+if(isset($_GET['edit']))
+{
+  header('Cache-Control: no-cache, no-store, must-revalidate');
+}
 ?>
 <html>
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link type="text/css" rel="stylesheet" href="books.css"/>
     <script type='text/javascript' src='script.js'></script>
     <script type='text/javascript' src='tags.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/md5-min.js'></script>
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
+    <script type="text/javascript" src="https://unpkg.com/pcloud-sdk-js@latest/dist/pcloudsdk.js"></script>
     <script type='text/javascript'>
           
           function downloadFile(bookid)
@@ -154,8 +160,8 @@ if(isset($_GET["page"]) || isset($_GET["subject"]) || isset($_GET["search"]))
                     $query_str="SELECT TITLE,YEAR,DESCR,AUTHORS,SIZE,IMG_PATH FROM BOOKS WHERE ID=$id";
                     $rec=$dbase->query($query_str);
                     $subjects=$dbase->query('SELECT ID,NAME FROM IT_SUBJECT WHERE ID IN (SELECT SUBJECT_ID FROM BOOKS_SUBJECTS_ASSOC WHERE BOOK_ID='.$id.') ORDER BY NAME');
-                    $links=$dbase->query('SELECT lnks.FILE_ID,lnks.FILE_SIZE,fs.VENDOR FROM BOOKS_LINKS AS lnks, FILE_STORE AS fs WHERE lnks.BOOK_ID=' . $id . ' AND fs.ID=lnks.STORE_ID');
-                    \utils\print_book($rec,$subjects,$links);
+                    $links=$dbase->query('SELECT lnks.FILE_ID,lnks.FILE_SIZE,fs.VENDOR, fs.VENDOR_CODE FROM BOOKS_LINKS AS lnks, FILE_STORE AS fs WHERE lnks.BOOK_ID=' . $id . ' AND fs.ID=lnks.STORE_ID');
+                    \utils\print_book($id,$rec,$subjects,$links);
                     $dbase->close();
                     printf( '<a class="nav_element" href="%s">back</a><br>',$_COOKIE['browse_backlink']);
                 }

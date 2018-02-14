@@ -8,86 +8,14 @@ include_once "utils.php";
 session_start();
 
 
-function temp_dir($subpath=null)
+if(!is_dir(\utils\temp_dir()))
 {
-    $temp_dir='temp';
-    if($subpath==null)
-        return $temp_dir;
-    return $temp_dir . '/' . $subpath;
+    mkdir(\utils\temp_dir());
 }
-
-function img_dir($subpath=null)
+if(!is_dir(\utils\img_dir()))
 {
-    $img_dir='img';
-    if($subpath==null)
-        return $img_dir;
-    return $img_dir . '/' . $subpath;
+    mkdir(\utils\img_dir());
 }
-
-if(!is_dir(temp_dir()))
-{
-    mkdir(temp_dir());
-}
-if(!is_dir(img_dir()))
-{
-    mkdir(img_dir());
-}
-
-function saveImageFile($dirname)
-{
-  $img_name = '';
-  if(isset($_POST['imgfile']) && strlen($_POST['imgfile'])>0)
-  {
-      if(!is_dir(img_dir($dirname)))
-      {
-          if(mkdir(img_dir($dirname))===false)
-            throw new \Exception("cannot create directory");
-      }
-      else
-      {
-        \Logs\logWarning("dir '$dirname' already created");
-      }
-      $img_name = img_dir($dirname).'/img.png';
-      file_put_contents($img_name,base64_decode($_POST['imgfile']));
-  }
-  return $img_name;
-}
-
-function pdfGetImage($pdf_name)
-{
-    $pdf_ext=".pdf";
-    $pos=strpos($pdf_name,$pdf_ext);
-    $img_name='';
-    $img_basename='';
-    if( $pos!=false && ($pos+strlen($pdf_ext))==strlen($pdf_name) )
-    {
-        $img_basename = '[' . basename($pdf_name,$pdf_ext) . ']';
-    }
-    else
-    {
-      \Logs\logInfo("'$pdf_name': not PDF file");
-      if(strlen($pdf_name)>0)
-      {
-        $img_basename= '[' . pathinfo($pdf_name)['filename'] . ']';
-      }
-      else
-      {
-        $img_basename = uniqid ();
-      }
-    }
-    try
-    {
-      $img_name = saveImageFile($img_basename);
-       \Logs\logInfo("img='$img_name'");
-    }
-    catch(\Exception $e)
-    {
-      $errid=\Logs\logException($e);
-    }
-   
-    return $img_name;
-}
-
 
 if(isset($_FILES) && isset($_FILES['upfile']))
 {
@@ -112,7 +40,7 @@ if(isset($_FILES) && isset($_FILES['upfile']))
         $range_end=0;
         $file_size=0;
         $filename = $_FILES['upfile']['name'];
-        $filepath=temp_dir($filename);
+        $filepath=\utils\temp_dir($filename);
 
         $hr='content-range';
         if(!isset($headers[$hr])) 
@@ -139,8 +67,8 @@ if(isset($_FILES) && isset($_FILES['upfile']))
     }
     else 
     {
-        $resultat = move_uploaded_file($_FILES['upfile']['tmp_name'],temp_dir($_FILES['upfile']['name']));
-        $img=pdfGetImage($_FILES['upfile']['name']);
+        $resultat = move_uploaded_file($_FILES['upfile']['tmp_name'],\utils\temp_dir($_FILES['upfile']['name']));
+        $img=\utils\img_dir($_FILES['upfile']['name']);
         
     }
 }
@@ -151,10 +79,10 @@ if(isset($_POST['action']) && $_POST['action']==='book_create')
 
     $dbt->title=$_POST['title'];$dbt->author=$_POST['author'];$dbt->descr=$_POST['descr'];
     $dbt->file_size=$dbt->size=$_POST['file_size'];$dbt->year=$_POST['year'];
-    //$dbt->hash=hash_file('md5',temp_dir($_POST['file_name']));
+    //$dbt->hash=hash_file('md5',\utils\temp_dir($_POST['file_name']));
     $dbt->hash=$_POST['hash'];
     try{
-      $img=pdfGetImage($_POST['file_name']);
+      $img=\utils\pdfGetImage($_POST['file_name'],$_POST['imgfile']);
     }catch(\Exception $e)
     {
       \Logs\logException($e);
@@ -162,7 +90,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_create')
     }
     if(strlen($img)==0)
     {
-      $img=img_dir('book250x250.png');
+      $img=\utils\img_dir('book250x250.png');
     }  
     
     $dbt->img=$img;
@@ -213,7 +141,7 @@ if(isset($_GET['action']) && $_GET['action']==='book_delete')
     if($rec->next())
     {
       $img_path=$rec->field_value('IMG_PATH');
-      if($img_path!==img_dir('book250x250.png'))
+      if($img_path!==\utils\img_dir('book250x250.png'))
       {
         unlink($img_path);
         rmdir(dirname($img_path));
@@ -255,7 +183,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
       {
         $img_path=$res->field_value('IMG_PATH');
         $img_basename= '[' . pathinfo($res->field_value('FILE_NAME'))['filename'] . ']';
-        if($img_path!=null && strlen($img_path)>0 && $img_path!==img_dir('book250x250.png'))
+        if($img_path!=null && strlen($img_path)>0 && $img_path!==\utils\img_dir('book250x250.png'))
         {
           if(is_file($img_path))
           {
@@ -265,15 +193,15 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
         }
         else
         {
-          $img_path=img_dir($img_basename) . '/img.png';
+          $img_path=\utils\img_dir($img_basename) . '/img.png';
           \Logs\logDebug("new img path: ".$img_path);
           $update_query = $update_query . ', IMG_PATH=\'' . mysqli_real_escape_string($con,$img_path) . '\'';
         }
         if(strlen($img_path))
         {
-          if(!is_dir(img_dir($img_basename)))
+          if(!is_dir(\utils\img_dir($img_basename)))
           {
-            mkdir(img_dir($img_basename));
+            mkdir(\utils\img_dir($img_basename));
           }
           $res=file_put_contents($img_path,base64_decode($_POST['imgfile']));
           if($res===false)
@@ -319,6 +247,7 @@ if(isset($_POST['action']) && $_POST['action']==='book_update')
     $dbase->query($sql);
     $dbase->close();
     header('Location: home.php?bookid='.$id);
+    header('Cache-Control: no-cache, no-store, must-revalidate');
 }
 
 if(isset($_GET['action']) && $_GET['action']==='download')

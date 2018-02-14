@@ -89,6 +89,13 @@ abstract class Client
         catch(\Exception $e)
         {
             $ret=\Logs\logException($e);
+            if($this->action && $this->action==='login')
+            {
+              $html_response=sprintf("<html><body> <script type='text/javascript'> window.opener.postMessage('{\"error\" : \"' + %s + '\" }',window.location.origin); 
+                                      window.close(); </script> </body></html>",$e->getMessage());
+              echo $html_response;
+              return;
+            }
             if($ret && $ret>0)
             {
                 header('Location: home.php?errid=' . $ret);
@@ -221,7 +228,7 @@ abstract class Client
             curl_close($curl);
             throw new \Exception('curl_exec() failed: ' . curl_error($curl));
         }
-
+        \Logs\logInfo('curl http response code=' . curl_getinfo($curl, CURLINFO_HTTP_CODE));
         curl_close($curl);
         return $result;
     }

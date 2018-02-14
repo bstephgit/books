@@ -172,9 +172,9 @@ class PCloudDrive extends Drive\Client
         return (object) array(
             'access_token' => $this->getAccessToken(),
             'book_folder' => $book_folder->folderid,
-            'urls' => array('download' =>array( 'method' => 'GET', 'url' => $base_url. '/getfilelink?fileid={fileid}&access_token={accesstoken}&forcedownload=1' ), 
+            'urls' => array('download' =>array( 'method' => 'GET', 'url' => $base_url . '/getfilelink?fileid={fileid}&access_token={accesstoken}&forcedownload=1' ), 
                             'upload' => array( 'method' => 'POST', 'url' => $base_url . '/uploadfile?access_token={accesstoken}',
-                                               'body' =>array ( 'filename' => '{filename}',
+                                               'body' => array ( 'filename' => '{filename}',
                                                                 'folderid' => $book_folder->folderid,
                                                                 'nopartial' => 1,
                                                                 'data' => '{filecontent}' ) ),
@@ -187,31 +187,23 @@ class PCloudDrive extends Drive\Client
 			if($this->isLogged())
 			{
 				$access_token=$this->getAccessToken();
-				$download_url = self::API_URL . '/getfilelink?fileid=' /*'/getpublinkdownload?fileid='*/ . $fileid . '&access_token=' . $access_token . '&forcedownload=1';
-				//$url = self::API_URL . '/getfilepublink?fileid=' . $fileid;
+				
+				$download_url = self::API_URL . '/getfilelink?access_token=' . $access_token . '&fileid=' . $fileid  . '&forcedownload=1';
 				if($this->useDownloadProxy())
 				{
-					$options=array(
-							 CURLOPT_HTTPHEADER => array(
-									 //'Authorization: Bearer ' . $access_token,
-									 'Authorization: Basic ' . base64_encode('b13_17778490:tecste1'),
-                    'X-Requested-With: XMLHttpRequest'
-						
-							 )
-					 );
+					$options=array();
 
 					$resp=json_decode($this->curl_request($download_url,$options));
 					if($resp->result!=0)
 					{
-						throw new \Exception('cannot get file link');
+						throw new \Exception('cannot get file link: ' . strval($resp->result));
 					}
-					
 					$download_url= 'https://' . $resp->hosts[ time() % count($resp->hosts) ] . $resp->path;
 					
 					return array( 'method' => 'GET', 'url' =>  $download_url, 'headers' => array() );
 				}
 				
-				return array( 'method' => 'GET', 'url' =>  $download_url, 'headers' => array("Authorization: Bearer $access_token") );
+				return array( 'method' => 'GET', 'url' =>  $download_url );
 			}
 			else
 			{
@@ -254,7 +246,7 @@ class PCloudDrive extends Drive\Client
         }
         return $response->metadata;
     }
-		public function useDownloadProxy() { return true; }
+		public function useDownloadProxy() { return false; }
 		
 		protected function reparent()
 		{

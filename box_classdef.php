@@ -244,7 +244,7 @@ class BoxDrive extends Drive\Client
         $response=json_decode($response);
         return $response;
     }
-	  public function useDownloadProxy() { return true; }
+	  public function useDownloadProxy() { return false; }
 }
 
  ?>

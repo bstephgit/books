@@ -55,13 +55,14 @@ class AmazonCloudHelper extends Drive\Client
     {
         try
         {
-            if(!property_exists($this,'token')) throw new \Exception('token not found');
+            if(!property_exists($this,'token') || $this->token==NULL) throw new \Exception('token not found');
             if(!property_exists($this->token,'expires_in')) throw new \Exception('expires_in not found');
             if(!property_exists($this->token,'created')) throw new \Exception('created not found');
             return (($this->token->expires_in + $this->token->created)<=time());
         }
         catch(\Exception $e)
         {
+						\Logs\logDebug(var_export($this,true));
             \Logs\logWarning($e->getMessage());
         }
         return false;
@@ -253,8 +254,10 @@ class AmazonCloudHelper extends Drive\Client
         {
             return;
         }*/
+				sleep(1);
         $url = self::API_URL . '/drive/v1/account/endpoint';
         
+				\Logs\logInfo($this->getAccessToken());
         $options = array(
             CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->getAccessToken() )
         );
@@ -276,6 +279,7 @@ class AmazonCloudHelper extends Drive\Client
         }
         else 
         {
+					   \Logs\logErr('contentUrl not found \n' . var_export($response,true));
             throw new \Exception('contentUrl not found');
         }
         if(property_exists($response,'metadataUrl'))
@@ -284,6 +288,7 @@ class AmazonCloudHelper extends Drive\Client
         }
         else 
         {
+						\Logs\logErr('metadataUrl not found \n' . var_export($response,true));
             throw new \Exception('metadataUrl not found');
         }
     }

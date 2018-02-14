@@ -86,7 +86,12 @@ Store.prototype.login = function ()
 																console.log('got message:',info);
                                 if(info!=null)
                                 {
-                                    self.store_info = JSON.parse(info);
+																		var jsonstr = JSON.parse(info);
+																		if(jsonstr.error)
+																		{
+																			 throw new Error(jsonstr.error);
+																		}
+                                    self.store_info = jsonstr;
 																		doresponse(self.store_info);
                                 }
 															else
@@ -94,7 +99,7 @@ Store.prototype.login = function ()
                             }
                             catch (err)
                             {
-															console.error(info);
+															console.error(err);
 															doerror(err);
                             }
                         }
@@ -264,6 +269,9 @@ Store.prototype.download = function()
 	var token = this.store_info.access_token;
 	var self=this;
 	self.total_loaded=0;
+	var download = this.store_info.downloadLink;
+	
+	var url = download.url;
 	
 	function doerror(err)
 	{
@@ -389,23 +397,23 @@ Store.prototype.download = function()
 		}
 	}
 	
-	if(/*vendor==='PCLD'*/false)
+	if(/*vendor==='PCLD'*/ false)
 	{
 		req.onload = function()
 		{
 			if(req.status<400)
 			{
-				console.log(req.response);
-				var download_url = JSON.parse(req.response);
-
-				if(download_url.error){	alert(download_url.error);	return; }
+				console.dir(req.response);
 				
-				//window.open( 'https://' + download_url.hosts[0] + download_url.path );
-				window.open( download_url.url );
+				var download_url = JSON.parse(req.response);
+				
+				if(download_url.error){	alert(download_url.error);	doerror(new Errror(download_url.error)); return; }
+				
+				window.open( 'https://' + download_url.hosts[0] + download_url.path );
 				
 			}
 			else	doerror(req);
-		}
+		};
 	}
 	else
 	{
@@ -416,9 +424,7 @@ Store.prototype.download = function()
 		document.getElementById('btnDownload').disabled = true;
 	}
 	
-	var download = this.store_info.downloadLink;
 	
-	var url = download.url;
 	req.open( download.method, url, true );
 	
 	console.log('download url',url);
