@@ -1,6 +1,7 @@
  
 <?php   
 include_once "db.php";
+include_once "utils.php";
 
 $upload = isset($_GET['upload']) && $_GET['upload']==='1';
 $edit = isset($_GET['edit']);
@@ -55,7 +56,7 @@ if($edit)
   <?php } if($edit){ ?>
       <input type='hidden' name='action' value='book_update'>
       <input type='hidden' name='bookid' value=''>
-      <?php echo '<img id="preview" width="250" height="280" src="' . $book['IMG_PATH'] . '" style="cursor: hand" onclick="browseimage()"/>'; ?>
+      <?php echo '<img id="preview" width="250" height="280" src="' . utils\encodePath($book['IMG_PATH']). '" style="cursor: hand" onclick="browseimage()"/>'; ?>
       <input type='file' name="imginput" id='imginput' style='visibility: hidden' onchange='loadimage(this)'>
       <input type='hidden' name='uploadflag' id='uploadflag' value='false'>
       <input type='hidden' name='imgfile' id='imgfile'>

@@ -242,7 +242,7 @@ function print_book($bookid,$rec,$subjects,$links)
         printf("<div class='book'>Auteur: <span>%s</span></div>",$author);
         printf("<div class='book'>Parution: <span>%s</span></div>",$year);
         printf("<div class='book'>File size: <span>%s</span></div>",sizeUnit($size));
-        printf("<div class='book'><span class='book_descr'>%s</span></div>",utf8_encode($descr));
+        printf("<div class='book'><span class='book_descr'>%s</span></div>",($descr));
         if($links && $links->next())
         {
            $size=$links->field_value('FILE_SIZE');
