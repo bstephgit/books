@@ -18,4 +18,10 @@
         <user>b13_17778490</user>
         <password>Motdepasse21!</password>
     </host>
+    <host name="localhost">
+        <server>mysqlserver</server>
+        <base>bookstoredb</base>
+        <user>dbuser</user>
+        <password>aldu</password>
+    </host>
 </odbc>

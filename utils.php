@@ -320,6 +320,12 @@ function printFooterLinks()
          $sql='SELECT COUNT(*) FROM BOOKS';
        }
 
+       if($dbase==NULL)
+       {
+        var_dump(mysqli_connect_errno());
+        var_dump(\Database\odbc());
+        return;
+       }
        $rec=$dbase->query($sql);
        $rec->next(true);
        $count=$rec->field_value(0);
