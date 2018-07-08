@@ -274,124 +274,119 @@ function print_book($bookid,$rec,$subjects,$links)
         echo "</table></div>";
     }
 }
-
+    
 function printFooterLinks($order)
 {
-    
-    if(!isset($_GET['bookid']) || isset($_GET['page']) || isset($_GET['subject']) || isset($_GET['search']))
+     $page=1;
+     $nb_elem=6;
+     if(isset($_GET['page']))
+     {
+       $page=intval($_GET['page']);
+     }
+     $offset=(($page-1)*$nb_elem);
+
+     $dbase = \Database\odbc()->connect();
+     $has_subject=false;
+     $has_search=false;
+     $subject='';
+     $search_str='';
+     $search_regex='';
+     if(isset($_GET['subject']))
+     {
+       $has_subject=true;
+       $subject=$_GET['subject'];
+       $sql="SELECT COUNT(*) FROM BOOKS WHERE ID IN (SELECT BOOK_ID FROM BOOKS_SUBJECTS_ASSOC WHERE SUBJECT_ID=$subject)";
+     }
+     else if(isset($_GET['search']))
+     {
+       $search_str=urlencode($_GET['search']);
+       $has_search=true;
+       $searchstring=$_GET['search'];
+       $tok = strtok($searchstring,' ');
+       $sep='';
+       while($tok!=false)
+       {
+         $search_regex = $search_regex . $sep . escapeRegExpChars(mysqli_real_escape_string($dbase->con(),$tok));
+         $sep = '[[:blank:]]+';
+         $tok = strtok(' ');
+       }
+       $sql="SELECT COUNT(*) FROM BOOKS WHERE TITLE REGEXP '$search_regex'";
+       \Logs\logInfo($sql);
+     }
+     else
+     {
+       $sql='SELECT COUNT(*) FROM BOOKS';
+     }
+
+     $rec=$dbase->query($sql);
+     $rec->next(true);
+     $count=$rec->field_value(0);
+
+     $page_max=intval(ceil($count/$nb_elem));
+     $page=min($page,$page_max);
+
+    \Logs\logInfo('count=' . strval($count));
+    if($has_subject)
     {
-
-       $page=1;
-       $nb_elem=6;
-       if(isset($_GET['page']))
-       {
-         $page=intval($_GET['page']);
-       }
-       $offset=(($page-1)*$nb_elem);
-
-       $dbase = \Database\odbc()->connect();
-       $has_subject=false;
-       $has_search=false;
-       $subject='';
-       $search_str='';
-       $search_regex='';
-       if(isset($_GET['subject']))
-       {
-         $has_subject=true;
-         $subject=$_GET['subject'];
-         $sql="SELECT COUNT(*) FROM BOOKS WHERE ID IN (SELECT BOOK_ID FROM BOOKS_SUBJECTS_ASSOC WHERE SUBJECT_ID=$subject)";
-       }
-       else if(isset($_GET['search']))
-       {
-         $search_str=urlencode($_GET['search']);
-         $has_search=true;
-         $searchstring=$_GET['search'];
-         $tok = strtok($searchstring,' ');
-         $sep='';
-         while($tok!=false)
-         {
-           $search_regex = $search_regex . $sep . escapeRegExpChars(mysqli_real_escape_string($dbase->con(),$tok));
-           $sep = '[[:blank:]]+';
-           $tok = strtok(' ');
-         }
-         $sql="SELECT COUNT(*) FROM BOOKS WHERE TITLE REGEXP '$search_regex'";
-         \Logs\logInfo($sql);
-       }
-       else
-       {
-         $sql='SELECT COUNT(*) FROM BOOKS';
-       }
-
-       $rec=$dbase->query($sql);
-       $rec->next(true);
-       $count=$rec->field_value(0);
-
-       $page_max=intval(ceil($count/$nb_elem));
-       $page=min($page,$page_max);
-
-      \Logs\logInfo('count=' . strval($count));
-      if($has_subject)
-      {
-        $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE ID IN (SELECT BOOK_ID FROM BOOKS_SUBJECTS_ASSOC WHERE SUBJECT_ID=$subject) ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
-      }
-      else if($has_search)
-      {
-        $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE TITLE REGEXP '$search_regex' ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
-      }
-      else
-       $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
-
-       $rec=$dbase->query($sql);
-       if($rec)
-       {
-           echo '<div class="nav_elements">';
-           while($rec->next())
-           {
-             $title=$rec->field_value('TITLE');
-             $charcount=0;$index=0;
-
-             while($index < strlen($title) && $charcount<=28)
-             {
-               if(ctype_upper($title[$index++]))
-                 $charcount += 1.5;
-               else
-                 $charcount += 1;
-             }
-             if($index<strlen($title))
-             {
-               $title= sprintf('<abbr title="%s">%s</abbr>...',$title,substr($title,0,$index));
-             }
-             printf('<table class="book_list"><tr><td><a href="home.php?bookid=%s"><img src="%s" class="book"></a></td></tr><tr><td><a class="nav_element" href="home.php?bookid=%s">%s</a></td></tr></table>',
-                $rec->field_value('ID'),encodePath($rec->field_value('IMG_PATH')),$rec->field_value('ID'),$title);
-           }
-           echo '</div>';
-       }
-       $dbase->close();
-
-       $page=min($page,$page_max);
-       if($page>1)
-       {
-         $prev=$page-1;
-         if($has_subject)
-            echo "<a href='home.php?page=$prev&subject=$subject&order=$order'>previous</a>";
-         else if($has_search)
-           echo "<a href='home.php?page=$prev&search=$search_str&order=$order'>previous</a>";
-         else
-            echo "<a href='home.php?page=$prev&order=$order'>previous</a>";
-       }
-
-       printf("<input type='number' id='nbpage' value='%s' min='1' max='%s' size=3 onchange='changepage(event)'>",$page,$page_max);
-       if($page<$page_max)
-       {
-         $next=$page+1;
-         if($has_subject)
-           echo "<a href='home.php?page=$next&subject=$subject&order=$order'>next</a>";
-         else if($has_search)
-           echo "<a href='home.php?page=$next&search=$search_str&order=$order'>next</a>";
-         else
-          echo "<a href='home.php?page=$next&order=$order'>next</a>";
-       }
+      $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE ID IN (SELECT BOOK_ID FROM BOOKS_SUBJECTS_ASSOC WHERE SUBJECT_ID=$subject) ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
     }
+    else if($has_search)
+    {
+      $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE TITLE REGEXP '$search_regex' ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
+    }
+    else
+     $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
+
+     $rec=$dbase->query($sql);
+     if($rec)
+     {
+         echo '<div class="nav_elements">';
+         while($rec->next())
+         {
+           $title=$rec->field_value('TITLE');
+           $charcount=0;$index=0;
+
+           while($index < strlen($title) && $charcount<=28)
+           {
+             if(ctype_upper($title[$index++]))
+               $charcount += 1.5;
+             else
+               $charcount += 1;
+           }
+           if($index<strlen($title))
+           {
+             $title= sprintf('<abbr title="%s">%s</abbr>...',$title,substr($title,0,$index));
+           }
+           printf('<table class="book_list"><tr><td><a href="home.php?bookid=%s"><img src="%s" class="book"></a></td></tr><tr><td><a class="nav_element" href="home.php?bookid=%s">%s</a></td></tr></table>',
+              $rec->field_value('ID'),encodePath($rec->field_value('IMG_PATH')),$rec->field_value('ID'),$title);
+         }
+         echo '</div>';
+     }
+     $dbase->close();
+
+     $page=min($page,$page_max);
+     if($page>1)
+     {
+       $prev=$page-1;
+       if($has_subject)
+          echo "<a href='home.php?page=$prev&subject=$subject&order=$order'>previous</a>";
+       else if($has_search)
+         echo "<a href='home.php?page=$prev&search=$search_str&order=$order'>previous</a>";
+       else
+          echo "<a href='home.php?page=$prev&order=$order'>previous</a>";
+     }
+
+     printf("<input type='number' id='nbpage' value='%s' min='1' max='%s' size=3 onchange='changepage(event)'>",$page,$page_max);
+     if($page<$page_max)
+     {
+       $next=$page+1;
+       if($has_subject)
+         echo "<a href='home.php?page=$next&subject=$subject&order=$order'>next</a>";
+       else if($has_search)
+         echo "<a href='home.php?page=$next&search=$search_str&order=$order'>next</a>";
+       else
+        echo "<a href='home.php?page=$next&order=$order'>next</a>";
+     }
 }
 function escape($char)
 {

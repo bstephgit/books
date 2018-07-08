@@ -200,11 +200,11 @@ if(isset($_GET['order']))
                     $dbase->close();
                     printf( '<a class="nav_element" href="%s">back</a><br>',$_COOKIE['browse_backlink']);
                 }
-
-            } 
-        
-            \utils\printFooterLinks($order);
-        
+            }
+            else //page or subject or search
+            {
+               \utils\printFooterLinks($order);
+            }
             if($_GET['errid'])
             {
                 $dbase = Database\odbc()->connect();
