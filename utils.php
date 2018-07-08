@@ -74,8 +74,9 @@ function curl_request($url, $options = array())
   $result = curl_exec($curl);
 
   if (false === $result) {
+      $err_msg = curl_error($curl);
       curl_close($curl);
-      throw new \Exception('curl_exec() failed: ' . curl_error($curl));
+      throw new \Exception('\utils\curl_request curl_exec() failed: ' . $err_msg);
   }
   $httpcode = intval(curl_getinfo($curl, CURLINFO_HTTP_CODE));
   curl_close($curl);
@@ -274,9 +275,10 @@ function print_book($bookid,$rec,$subjects,$links)
     }
 }
 
-function printFooterLinks()
+function printFooterLinks($order)
 {
-    if(count($_GET)==0 || isset($_GET['page']) || isset($_GET['subject']) || isset($_GET['search']))
+    
+    if(!isset($_GET['bookid']) || isset($_GET['page']) || isset($_GET['subject']) || isset($_GET['search']))
     {
 
        $page=1;
@@ -320,12 +322,6 @@ function printFooterLinks()
          $sql='SELECT COUNT(*) FROM BOOKS';
        }
 
-       if($dbase==NULL)
-       {
-        var_dump(mysqli_connect_errno());
-        var_dump(\Database\odbc());
-        return;
-       }
        $rec=$dbase->query($sql);
        $rec->next(true);
        $count=$rec->field_value(0);
@@ -336,14 +332,14 @@ function printFooterLinks()
       \Logs\logInfo('count=' . strval($count));
       if($has_subject)
       {
-        $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE ID IN (SELECT BOOK_ID FROM BOOKS_SUBJECTS_ASSOC WHERE SUBJECT_ID=$subject) ORDER BY ID LIMIT $nb_elem OFFSET $offset";
+        $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE ID IN (SELECT BOOK_ID FROM BOOKS_SUBJECTS_ASSOC WHERE SUBJECT_ID=$subject) ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
       }
       else if($has_search)
       {
-        $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE TITLE REGEXP '$search_regex' ORDER BY ID LIMIT $nb_elem OFFSET $offset";
+        $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS WHERE TITLE REGEXP '$search_regex' ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
       }
       else
-       $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS ORDER BY ID LIMIT $nb_elem OFFSET $offset";
+       $sql="SELECT ID,TITLE,IMG_PATH FROM BOOKS ORDER BY ID $order LIMIT $nb_elem OFFSET $offset";
 
        $rec=$dbase->query($sql);
        if($rec)
@@ -377,11 +373,11 @@ function printFooterLinks()
        {
          $prev=$page-1;
          if($has_subject)
-            echo "<a href='home.php?page=$prev&subject=$subject'>previous</a>";
+            echo "<a href='home.php?page=$prev&subject=$subject&order=$order'>previous</a>";
          else if($has_search)
-           echo "<a href='home.php?page=$prev&search=$search_str'>previous</a>";
+           echo "<a href='home.php?page=$prev&search=$search_str&order=$order'>previous</a>";
          else
-            echo "<a href='home.php?page=$prev'>previous</a>";
+            echo "<a href='home.php?page=$prev&order=$order'>previous</a>";
        }
 
        printf("<input type='number' id='nbpage' value='%s' min='1' max='%s' size=3 onchange='changepage(event)'>",$page,$page_max);
@@ -389,11 +385,11 @@ function printFooterLinks()
        {
          $next=$page+1;
          if($has_subject)
-           echo "<a href='home.php?page=$next&subject=$subject'>next</a>";
+           echo "<a href='home.php?page=$next&subject=$subject&order=$order'>next</a>";
          else if($has_search)
-           echo "<a href='home.php?page=$next&search=$search_str'>next</a>";
+           echo "<a href='home.php?page=$next&search=$search_str&order=$order'>next</a>";
          else
-          echo "<a href='home.php?page=$next'>next</a>";
+          echo "<a href='home.php?page=$next&order=$order'>next</a>";
        }
     }
 }

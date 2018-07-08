@@ -39,6 +39,7 @@ div.nav_elements{
 a.nav_element
 {
     color: white;
+    font-family: "Times New Roman", Times, serif;
 }
 table.nav_element{
     border-width: 0px;
@@ -116,6 +117,10 @@ div.upload-in
 div.book_record
 {
     width: 95%;
+}
+.book_record a
+{
+  color: #5bc0de;
 }
 table.book_record
 {

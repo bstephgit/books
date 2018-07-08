@@ -14,6 +14,16 @@ if(isset($_GET['edit']))
 {
   header('Cache-Control: no-cache, no-store, must-revalidate');
 }
+$order='DESC';
+if(isset($_GET['order']))
+{
+  $value=$_GET['order'];
+  if($value==='DESC' || $value==='ASC')
+  {
+    $order=$value;
+  }
+}
+ 
 ?>
 <html>
 <head>
@@ -88,11 +98,36 @@ if(isset($_GET['edit']))
         <div class='navtitle'><h3>Menu</h3></div>
         <div class="nav_elements">
             <a class="nav_element" href="home.php">home</a><br>
-            <?php if(isset($_GET['bookid'])) {
+            <?php 
+            if(isset($_GET['bookid'])) {
                 printf( '<a class="nav_element" href="upload.php?action=book_delete&bookid=%s" onclick="return confirm(\'delete book?\');">delete book</a><br>',$_GET['bookid']);
                 printf( '<a class="nav_element" href="home.php?edit=%s">edit book</a><br>',$_GET['bookid']);
-            } ?>
+            }
+            else
+            {
+              $cmd_order='ASC';
+              $label_order='ascendant order';
+              if($order==='ASC')
+              {
+                $cmd_order = 'DESC';
+                $label_order='descendant order';
+              }
+              $url="home.php";
+              $sep="?";
+              foreach($_GET as $key => $value)
+              {
+                if($key!=='order')
+                {
+                  $url= $url . $sep . $key . '=' . $value;
+                  $sep = '&';
+                }
+              }
+              $url = $url . $sep . "order=" . $cmd_order;
+              printf('<a class="nav_element" href="%s">%s</a><br>',$url,$label_order);
+            }
+          ?>
             <a class="nav_element" href="home.php?upload=1">uploader</a><br>
+            
         </div>
         
     </div>
@@ -168,7 +203,7 @@ if(isset($_GET['edit']))
 
             } 
         
-            \utils\printFooterLinks();
+            \utils\printFooterLinks($order);
         
             if($_GET['errid'])
             {
