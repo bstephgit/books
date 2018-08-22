@@ -29,6 +29,8 @@ if(isset($_GET['order']))
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link type="text/css" rel="stylesheet" href="books.css"/>
+    <script type='text/javascript' src='../zip.js/zip.js'></script>
+    <script type='text/javascript' src='../zip.js/inflate.js'></script>
     <script type='text/javascript' src='script.js'></script>
     <script type='text/javascript' src='tags.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js'></script>

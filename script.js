@@ -635,7 +635,7 @@ document.addEventListener("DOMContentLoaded", function() {
 				{
 					//var thumbSize = 264;
 					var canvas = document.getElementById("preview");
-					//alert(file.type);
+					console.log(file.type);
 					if(file.type==='application/pdf')
 					{
 						PDFJS.getDocument(window.URL.createObjectURL(file)).then(function(pdf) {
@@ -657,6 +657,85 @@ document.addEventListener("DOMContentLoaded", function() {
 							});
 						});
 					}
+          if(file.type==='application/epub+zip')
+          {
+            var onerror = function(err){
+              console.error(err,'for file',file);
+            };
+            var processZipEntries = function (entries,reader){
+              var some_error;
+              try{
+                    if(!Array.isArray(entries))
+                    {
+                      var msg = "EPUB file reading error: entry list not an array";
+                      console.error(msg , entries);
+                      throw msg + " (" + typeof(entries) + ")";
+                    }
+                    var cover_img,cover_mime_type;
+                    for(let i in entries)
+                    {
+                          if( entries[i].filename.toLowerCase().match(/.opf$/))
+                          {
+                            entries[i].getData( new zip.TextWriter(), function(epub_content){
+                              //console.log(epub_content);
+                              //Get EPUB cover image: http://idpf.org/forum/topic-715
+                              var oParser = new DOMParser();
+                              var oDOM = oParser.parseFromString(epub_content, "application/xml");
+                              var nsResolver = (function (element) {  var nsResolver = element.ownerDocument.createNSResolver(element), defaultNamespace = element.getAttribute('xmlns');
+                                                  return function (prefix) { return nsResolver.lookupNamespaceURI(prefix) || defaultNamespace; };
+                                              } (oDOM.documentElement)); 
+                              var xpath = oDOM.evaluate("string(/ns:package/ns:metadata/ns:meta[@name='cover']/@content)",oDOM,nsResolver,XPathResult.STRING_TYPE,null);
+
+                              if(xpath.stringValue.length===0)
+                              {
+                                  oDOM.evaluate("/ns:package/ns:manifest/ns:item[@properties='cover-image']",oDOM,nsResolver,XPathResult.ANY_UNORDERED_NODE_TYPE,xpath);
+                              }
+                              else
+                              {
+                                oDOM.evaluate("/ns:package/ns:manifest/ns:item[@id='" + xpath.stringValue + "']",oDOM,nsResolver,XPathResult.ANY_UNORDERED_NODE_TYPE,xpath);
+                              }
+                              if(!xpath.singleNodeValue) throw 'EPUB Format error: cannot find cover image item';
+                              cover_img = xpath.singleNodeValue.getAttribute('href');
+                              cover_mime_type = xpath.singleNodeValue.getAttribute('media-type');
+                              var done = false;
+                               for(let j in entries)
+                               {
+                                 var pattern = entries[j].filename.match( new RegExp(cover_img+"$") );
+                                 if(pattern)
+                                 {
+                                   entries[j].getData( new zip.BlobWriter(cover_mime_type), function (blob_data){
+                                     var img = new Image(canvas.width,canvas.height);
+                                     img.onload = function(){ canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); };
+                                     img.src = window.URL.createObjectURL(blob_data);
+                                   });
+                                   done = true;
+                                 }
+                               }
+                               if(!done)  throw "EPUB cover image item '" + cover_img + "' not found";
+                             
+                            } );
+                          }
+                    }
+              }
+              catch(err)
+              {
+                console.log(err); 
+              }
+              finally{
+                  reader.close();
+              }
+            }
+   
+            //window.URL.createObjectURL(file);
+            zip.useWebWorkers=false;
+            zip.createReader(new zip.BlobReader(file.slice()),function(reader){
+              reader.getEntries( 
+                function (entries) {
+                  processZipEntries(entries,reader);
+                }
+                , onerror );
+            },onerror);
+          }
 					else
 					{
 						imgfile.value='';
@@ -834,7 +913,7 @@ function getMimeType(filename)
 		case '.pdf':
 			return 'application/pdf';
 		case '.epub':
-			return 'application/epub';
+			return 'application/epub+zip';
 		case '.chm':
 			return 'application/x-chemdraw';
 		case '.rar':
