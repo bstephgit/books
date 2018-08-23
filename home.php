@@ -31,12 +31,12 @@ if(isset($_GET['order']))
     <link type="text/css" rel="stylesheet" href="books.css"/>
     <script type='text/javascript' src='../zip.js/zip.js'></script>
     <script type='text/javascript' src='../zip.js/inflate.js'></script>
+    <script type='text/javascript' src='store.js'></script>
     <script type='text/javascript' src='script.js'></script>
     <script type='text/javascript' src='tags.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/md5-min.js'></script>
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
-    <script type="text/javascript" src="https://unpkg.com/pcloud-sdk-js@latest/dist/pcloudsdk.js"></script>
     <script type='text/javascript'>
           
           function downloadFile(bookid)
