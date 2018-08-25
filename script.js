@@ -1,3 +1,33 @@
+function recursiveProm(testf)
+{
+	
+	return new Promise(function(fulfill){
+		testf( function(done){
+			fulfill(done);
+		});
+		
+	}).then( function(done) { if(!done) recursiveProm(testf); } );
+}
+
+function storeUplForm(form)
+{
+    var subjects=[]; var index=1;
+    while(true) { 
+			var name='topic'+index; 
+			if(form[name]) { if (form[name].checked) subjects.push(name);  } else  break;
+			index++;
+    }
+    obj = {
+        'title': form.title.value,
+        'author': form.author.value,
+        'file': form.file_upload.files[0],
+        'year': form.year.value,
+        'descr': form.descr.value,
+        'store': form.store.value,
+        'subjects': subjects
+    };
+    localStorage.setItem('upload', JSON.stringify(obj));
+}
 
 document.addEventListener("DOMContentLoaded", function() {
     
@@ -78,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function() {
 					//var thumbSize = 264;
 					var canvas = document.getElementById("preview");
 					canvas.has_preview=false;
-          			console.log(file.type);
+          console.log(file.type);
 					if(file.type==='application/pdf')
 					{
 						PDFJS.getDocument(window.URL.createObjectURL(file)).then(function(pdf) {
@@ -103,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function() {
           if(file.type==='application/epub+zip')
           {
             var onerror = function(err){
-              console.error(err,'for file',file);
+              console.error(err);
             };
             var processZipEntries = function (entries,reader){
               var some_error;
@@ -114,51 +144,109 @@ document.addEventListener("DOMContentLoaded", function() {
                       console.error(msg , entries);
                       throw msg + " (" + typeof(entries) + ")";
                     }
-                    var cover_img,cover_mime_type;
-                    for(let i in entries)
-                    {
-                          if( entries[i].filename.toLowerCase().match(/.opf$/))
-                          {
-                            entries[i].getData( new zip.TextWriter(), function(epub_content){
-                              //console.log(epub_content);
-                              //Get EPUB cover image: http://idpf.org/forum/topic-715
+                    var XPathObject = function(content,mime_type){
+                         return function(fullfill, reject){
+                            try{
                               var oParser = new DOMParser();
-                              var oDOM = oParser.parseFromString(epub_content, "application/xml");
-                              var nsResolver = (function (element) {  var nsResolver = element.ownerDocument.createNSResolver(element), defaultNamespace = element.getAttribute('xmlns');
-                                                  return function (prefix) { return nsResolver.lookupNamespaceURI(prefix) || defaultNamespace; };
-                                              } (oDOM.documentElement)); 
-                              var xpath = oDOM.evaluate("string(/ns:package/ns:metadata/ns:meta[@name='cover']/@content)",oDOM,nsResolver,XPathResult.STRING_TYPE,null);
+                              var o = { };
+                              o._oDom = oParser.parseFromString(content, mime_type);
+                              o._fnNsResolver = (function (element) {  var nsResolver = element.ownerDocument.createNSResolver(element), defaultNamespace = element.getAttribute('xmlns');
+                                                    return function (prefix) { return nsResolver.lookupNamespaceURI(prefix) || defaultNamespace; };
+                                                } (o._oDom.documentElement));
+                              o._oResult = null;
+                              fullfill(o);
+                            }
+                            catch(err)
+                            {
+                              reject(err); 
+                            }
+                         }
+                    };
+                    var doXPathQuery = function () {
+                      var sQuery = arguments[0];
+                      var oXPath = arguments[1];
+                      var result_type = arguments[2] || XPathResult.ANY_TYPE;
 
-                              if(xpath.stringValue.length===0)
-                              {
-                                  oDOM.evaluate("/ns:package/ns:manifest/ns:item[@properties='cover-image']",oDOM,nsResolver,XPathResult.ANY_UNORDERED_NODE_TYPE,xpath);
-                              }
-                              else
-                              {
-                                oDOM.evaluate("/ns:package/ns:manifest/ns:item[@id='" + xpath.stringValue + "']",oDOM,nsResolver,XPathResult.ANY_UNORDERED_NODE_TYPE,xpath);
-                              }
-                              if(!xpath.singleNodeValue) throw 'EPUB Format error: cannot find cover image item';
-                              cover_img = xpath.singleNodeValue.getAttribute('href');
-                              cover_mime_type = xpath.singleNodeValue.getAttribute('media-type');
-                              var done = false;
-                               for(let j in entries)
-                               {
-                                 var pattern = entries[j].filename.match( new RegExp(cover_img+"$") );
-                                 if(pattern)
-                                 {
-                                   entries[j].getData( new zip.BlobWriter(cover_mime_type), function (blob_data){
-                                     var img = new Image(canvas.width,canvas.height);
-                                     img.onload = function(){ canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); canvas.has_preview=true; };
-                                     img.src = window.URL.createObjectURL(blob_data);
-                                   });
-                                   done = true;
-                                 }
-                               }
-                               if(!done)  throw "EPUB cover image item '" + cover_img + "' not found";
-                             
-                            } );
+                      return new Promise(function(fullfill){
+                        var oDom  = oXPath._oDom;
+                        var fnResolver = oXPath._fnNsResolver;
+                        oXPath._oResult = oDom.evaluate(sQuery, oDom, fnResolver, result_type, null);
+                        fullfill(oXPath);
+                      });
+                    };
+                    var searchEntry = function(list,pred){
+                      return new Promise(function (resolve,reject){
+                        for(let i in list) {
+                          if(pred(list[i]))
+                          {
+                            resolve(list[i]);
+                            return;
                           }
-                    }
+                        }
+                        reject("Not found");
+                      });
+                    };
+                    var raiseError = function (o,msg){
+                      o._err = msg;
+                      throw o;
+                    };
+                    var doNext = (o) => { return new Promise( (resolve,reject) => resolve(o) );}
+
+                    var cover_img,cover_mime_type;
+                    //Get EPUB cover image: http://idpf.org/forum/topic-715
+                    searchEntry(entries,(entry) => entry.filename.toLowerCase().match(/.opf$/))
+                        .then(  (entry)  => {
+                            return new Promise( (resolve,reject) => {
+                                  entry.getData( new zip.TextWriter(), function(epub_content){  
+                                        resolve(epub_content);
+                                      });
+                                  });
+                              }).then( (epub_content) => {
+                                   
+                                  var promise = new Promise( XPathObject(epub_content, "application/xml") );
+                                   
+                                  promise.then( (oxp) => doXPathQuery("string(/ns:package/ns:metadata/ns:meta[@name='cover']/@content)", oxp))
+                                  .then((oxp) => {if (oxp._oResult.stringValue.length === 0)  raiseError(oxp,"Cover image not found in metadata"); return doNext(oxp); })
+                                  .then((oxp) => doXPathQuery("/ns:package/ns:manifest/ns:item[@id='" + oxp._oResult.stringValue + "']", oxp, XPathResult.ANY_UNORDERED_NODE_TYPE ))
+                                  .catch((oxp) => doXPathQuery("/ns:package/ns:manifest/ns:item[@properties='cover-image']", oxp, XPathResult.ANY_UNORDERED_NODE_TYPE ))
+                                  .then((oxp) =>  { if(!oxp._oResult.singleNodeValue) raiseError(oxp,"OPF cover Item not found"); return doNext(oxp); } )
+                                  .then((oxp) => {
+                                       cover_img = oxp._oResult.singleNodeValue.getAttribute('href');
+                                       cover_mime_type = oxp._oResult.singleNodeValue.getAttribute('media-type');
+                                       return doNext(null);
+                                  })
+                                  .catch((oxp) =>{
+                                    //try the hard way: indirectly through xhtml file referenced in OPF guide section, containing image href
+                                     var err_msg = "Cannot found EPUB cover image";
+                                     return doXPathQuery("string(/ns:package/ns:guide/ns:reference[@type='cover']/@href)",oxp)
+                                       .then((oxp) => { if(oxp._oResult.stringValue.length) return doNext(oxp._oResult.stringValue); else throw err_msg; })
+                                       .then((file_name) => { 
+                                              return searchEntry(entries, (entry) => entry.filename.match( new RegExp(file_name+"$") )) 
+                                        })
+                                       .then((entry) => { 
+                                             return new Promise( (resolve,reject) => {
+                                                entry.getData( new zip.TextWriter(), function(xhtml_content){
+                                                    resolve(xhtml_content);
+                                                })
+                                             })
+                                       })
+                                      .then( (xhtml_content) => new Promise(XPathObject(xhtml_content,'application/xhtml+xml') ) )
+                                      .then((oxp) => doXPathQuery("string(//ns:img/@src)",oxp) )
+                                      .then( (oxp) => { if(oxp._oResult.stringValue.length) return doNext(oxp); throw "Exception => exit"; } )
+                                      .then((oxp) => { cover_img = oxp._oResult.stringValue; cover_mime_type = getMimeType(cover_img);  } )
+                                  })
+                                  .then(() => searchEntry(entries, (entry) => entry.filename.match( new RegExp(cover_img+"$") )) )
+                                  .then( (entry) => {
+                                      return new Promise( entry.getData( new zip.BlobWriter(cover_mime_type), function (blob_data){
+                                               var img = new Image(canvas.width,canvas.height);
+                                               img.onload = function(){ canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); canvas.has_preview=true; };
+                                               img.src = window.URL.createObjectURL(blob_data);
+                                             }) );
+                                  }).catch(() => { throw 'EPUB Format error: cannot find cover image item'; } );
+                      
+                                  return promise;
+                                             
+                            }).catch((err) => console.error(err));
               }
               catch(err)
               {
@@ -224,7 +312,7 @@ document.addEventListener("DOMContentLoaded", function() {
 						document.getElementById('fileid').value=id;
 						//add image
 						var canvas = document.getElementById("preview");
-            			if(canvas.has_preview)
+            if(canvas.has_preview)
 						{
 							document.getElementById('imgfile').value=canvas.toDataURL("image/png").substr('data:image/png;base64,'.length);
 						}
@@ -366,6 +454,15 @@ function getMimeType(filename)
 		case '.htm':
 		case '.html':
 			return 'text/html';
+    case '.xhtml':
+      return 'application/xhtml+xml';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.png':
+      return 'image/png';
+    case '.gif':
+      return 'image/gif';
 		default:
 			return 'application/octet-stream';
 	}
