@@ -143,8 +143,19 @@ if(isset($_GET['action']) && $_GET['action']==='book_delete')
       $img_path=$rec->field_value('IMG_PATH');
       if($img_path!==\utils\img_dir('book250x250.png'))
       {
-        unlink($img_path);
-        rmdir(dirname($img_path));
+        $count_rec=$dbase->query("SELECT COUNT(*) FROM BOOKS WHERE IMG_PATH='$img_path'");
+        $count_rec->next(true);
+        $nb_books=$count_rec->field_value(0);
+        if($nb_books===1)
+        {
+          unlink($img_path);
+          rmdir(dirname($img_path));
+          \Logs\logDebug("Delete image path '$img_path'");
+        }
+        else
+        {
+          \Logs\logDebug("$nb_books book(s) have same image path: '$img_path'. Image not deleted.");
+        }
       }
     }
     $dbase->close();

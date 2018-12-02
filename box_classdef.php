@@ -82,6 +82,7 @@ class BoxDrive extends Drive\Client
             $response=json_decode($this->curl_post(self::TOKEN_URL,$body));
             if($response->error)
             {
+                $this->set_token(null);
                 throw new Exception($response->error);
             }
             \Logs\logDebug(var_export($response,true));
