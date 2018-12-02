@@ -42,7 +42,7 @@ function checkLogin($vendor_store)
             }
             catch(\Exception $e)
             {
-                \Logs\logWarning($e->getMessage());
+                \Logs\logWarning('Refresh token error: ' . $e->getMessage());
             }
         }
         \Logs\logDebug('checkLogin: redirect ' . $client->getRedirectUrl());
