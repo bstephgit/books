@@ -146,7 +146,7 @@ if(isset($_GET['action']) && $_GET['action']==='book_delete')
         $count_rec=$dbase->query("SELECT COUNT(*) FROM BOOKS WHERE IMG_PATH='$img_path'");
         $count_rec->next(true);
         $nb_books=$count_rec->field_value(0);
-        if($nb_books===1)
+        if($nb_books==1)
         {
           unlink($img_path);
           rmdir(dirname($img_path));
