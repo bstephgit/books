@@ -22,6 +22,7 @@ $html='';
 $tag='';
 
 if(isset($_GET['action'])) $action=$_GET['action'];
+else if(isset($_POST['action'])) $action=$_POST['action'];
 if(isset($_GET['bookid'])) $bookid=$_GET['bookid'];
 if(isset($_GET['store_code'])) $store=$_GET['store_code'];
 if(isset($_GET['html'])) $html=$_GET['html'];
@@ -159,5 +160,28 @@ if($action==='newtag' && strlen($tag)>0)
   }
   $dbase->close();
   echo $res;
+}
+if($action=='userlogin')
+{
+  $user='';
+  $pass='';
+  if(isset($_POST['user']))
+  {
+    $user=$_POST['user'];
+  }
+  if(isset($_POST['password']))
+  {
+    $pass=$_POST['password'];
+  }
+  \Logs\logInfo('log request: user="' . $user . '" - password="' . $pass . '"' );
+  if($user=='aldu' && $pass=='tecste1')
+  {
+    $_SESSION['user'] = $user;
+  }
+  else
+  {
+    $_SESSION['error'] = '<h2>Invalid user credentials</h2>';
+  }
+  header('Location: home.php'); 
 }
 ?>
