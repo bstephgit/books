@@ -23,7 +23,26 @@ if(isset($_GET['order']))
     $order=$value;
   }
 }
- 
+
+if(isset($_GET['logout']))
+{
+  if (isset($_SESSION['user']))
+  {
+    unset($_SESSION['user']);
+  }
+}
+
+$user = '';
+if (isset($_SESSION['user']))
+{
+  $user = $_SESSION['user'];
+}
+$error = '';
+if(isset($_SESSION['error']))
+{
+  $error=$_SESSION['error'];
+  unset($_SESSION['error']);
+}
 ?>
 <html>
 <head>
@@ -99,11 +118,30 @@ if(isset($_GET['order']))
     <div class='internal'>
         <div class='navtitle'><h3>Menu</h3></div>
         <div class="nav_elements">
+          
+            <?php
+              if(strlen($user)==0)
+              {
+                printf('<a class="nav_element" href="#" onclick="user_login()">login</a><br>');
+              }
+              else{
+                printf('<span>user: %s (<a class="nav_element" href="home.php?logout=1">logout</a></span>)<br>', $user);
+              }
+            ?>
             <a class="nav_element" href="home.php">home</a><br>
             <?php 
             if(isset($_GET['bookid'])) {
-                printf( '<a class="nav_element" href="upload.php?action=book_delete&bookid=%s" onclick="return confirm(\'delete book?\');">delete book</a><br>',$_GET['bookid']);
-                printf( '<a class="nav_element" href="home.php?edit=%s">edit book</a><br>',$_GET['bookid']);
+                //TO REMOVE
+                if(strlen($user)>0)
+                {
+                  printf( '<a class="nav_element" href="upload.php?action=book_delete&bookid=%s" onclick="return confirm(\'delete book?\');">delete book</a><br>',$_GET['bookid']);
+                  printf( '<a class="nav_element" href="home.php?edit=%s">edit book</a><br>',$_GET['bookid']);  
+                }
+                else
+                {
+                  printf( '<a class="nav_element" href="#" onclick="not_logged_msg()">delete book</a><br>');
+                  printf( '<a class="nav_element" href="#" onclick="not_logged_msg()">edit book</a><br>');  
+                }
             }
             else
             {
@@ -128,8 +166,11 @@ if(isset($_GET['order']))
               printf('<a class="nav_element" href="%s">%s</a><br>',$url,$label_order);
             }
           ?>
+          <?php if (strlen($user)>0){ ?>
             <a class="nav_element" href="home.php?upload=1">uploader</a><br>
-            
+          <?php  } else { ?>
+            <a class="nav_element" href="#" onclick="not_logged_msg()">uploader</a><br>
+          <?php }  ?>
         </div>
         
     </div>
@@ -179,6 +220,85 @@ if(isset($_GET['order']))
     
 </div>
 
+</div>
+   <!-- The Modal -->
+<div id="modal_id" class="modal">
+    <div class='internal modal-content' style='width: 20%; margin: auto; vertical-align: middle'>
+      <span class="close">&times;</span>
+      <div class='navtitle' id='modal_title'></div>
+      <!-- Modal content -->
+      <div class="nav_elements" id='modal_content'></div>
+    </div>
+</div>
+  <script type='text/javascript'>
+      
+      function get_modal(){
+        return document.getElementById('modal_id');
+      }
+    
+      function set_modal_title(str)
+      {
+        document.getElementById("modal_title").innerHTML = str;
+      }
+    
+      function set_modal_content(str)
+      {
+        document.getElementById("modal_content").innerHTML = str;
+      }
+      
+      function show_modal()
+      {
+          get_modal().style.display = "block";
+      }
+      function user_login()
+      {
+        set_modal_title( '<h3>Please Login</h3>' );
+        
+        var content = '<form method="POST" action="store.php">' +
+          '<input type="hidden" name="action" value="userlogin"><br>' +
+           '<table class="nav_element">' +
+            '<tr>' +
+              '<td>User:</td><td><input type="text" name="user"/></td>' +
+            '</tr>' +
+            '<tr>' +
+              '<td>Password:</td><td><input type="password" name="password"/></td>' +
+            '</tr>' +
+          '</table>' +
+          '<input type="submit" value="Login" name="do_log">' +
+         '</form>';
+         set_modal_content(content);
+         show_modal();
+      }
+      // Get the button that opens the modal
+      // Get the <span> element that closes the modal
+      var span = document.getElementsByClassName("close")[0];
+      // When the user clicks on <span> (x), close the modal
+      span.onclick = function() {
+        get_modal().style.display = "none";
+      }
+
+      // When the user clicks anywhere outside of the modal, close it
+      window.onclick = function(event) {
+        var modal = get_modal();
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      }
+      <?php
+      if(strlen($error)>0)
+      {
+         printf("set_modal_title('<img src='error.png'><h3>Error</h3>');");
+         printf("set_modal_content('<div>%s</div>');",$error);
+         printf("show_modal();");
+      }
+      ?>
+      function not_logged_msg()
+      {
+        set_modal_title("<img src='error.png'><h3>Not Logged</h3>");
+        set_modal_content("Only for authentified users.");
+        show_modal();
+      }
+    </script>
 <div class="main">
     <div class="banner"><h1 class="title">BOOK STORE</h1></div>
 
