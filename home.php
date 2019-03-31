@@ -223,7 +223,7 @@ if(isset($_SESSION['error']))
 </div>
    <!-- The Modal -->
 <div id="modal_id" class="modal">
-    <div class='internal modal-content' style='width: 20%; margin: auto; vertical-align: middle'>
+    <div class='internal modal-content' style='width: 20%; margin: auto;'>
       <span class="close">&times;</span>
       <div class='navtitle' id='modal_title'></div>
       <!-- Modal content -->
@@ -287,8 +287,8 @@ if(isset($_SESSION['error']))
       <?php
       if(strlen($error)>0)
       {
-         printf("set_modal_title('<img src='error.png'><h3>Error</h3>');");
-         printf("set_modal_content('<div>%s</div>');",$error);
+         printf("set_modal_title('<table class=\'nav_element\' style=\'margin: 10px\'><tr><td><img src=\'error.png\'></td><td><h3 style=\'margin-top: 15px\'>Error</h3></td></tr></table>');");
+         printf("set_modal_content('%s');",$error);
          printf("show_modal();");
       }
       ?>
@@ -327,7 +327,7 @@ if(isset($_SESSION['error']))
             {
                \utils\printFooterLinks($order);
             }
-            if($_GET['errid'])
+            if(isset($_GET['errid']))
             {
                 $dbase = Database\odbc()->connect();
                 if($dbase)
