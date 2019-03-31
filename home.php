@@ -111,7 +111,7 @@ if(isset($_SESSION['error']))
     </script>
 </head>
 <body>
-<div class="container">
+<!-- <div class="container"> -->
 
 <div class="nav">
     <div class="banner"></div>
@@ -220,7 +220,7 @@ if(isset($_SESSION['error']))
     
 </div>
 
-</div>
+<!-- </div> -->
    <!-- The Modal -->
 <div id="modal_id" class="modal">
     <div class='internal modal-content' style='width: 20%; margin: auto;'>
@@ -353,7 +353,7 @@ if(isset($_SESSION['error']))
         ?>
         </div>
     </div>
-</div>
-</div>
+  <span style="text-align: right; color: white"><h5 style="padding-right: 15px"><i>&#169; Stéphane Samara</i></h5></span>
+  </div>
 </body>
 </html>
