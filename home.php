@@ -284,19 +284,23 @@ if(isset($_SESSION['error']))
           modal.style.display = "none";
         }
       }
+      function error_modal(title,error_msg)
+      {
+        set_modal_title('<table class=\'nav_element\' style=\'margin: 10px\'><tr><td><img src=\'error.png\'></td><td><h3 style=\'margin-top: 15px\'>' + title + '</h3></td></tr></table>');
+        set_modal_content(error_msg);
+        show_modal();
+      }
       <?php
+      //show error
       if(strlen($error)>0)
       {
-         printf("set_modal_title('<table class=\'nav_element\' style=\'margin: 10px\'><tr><td><img src=\'error.png\'></td><td><h3 style=\'margin-top: 15px\'>Error</h3></td></tr></table>');");
-         printf("set_modal_content('%s');",$error);
-         printf("show_modal();");
+         printf("error_modal('Error','%s');",$error);
       }
+
       ?>
       function not_logged_msg()
       {
-        set_modal_title("<img src='error.png'><h3>Not Logged</h3>");
-        set_modal_content("Only for authentified users.");
-        show_modal();
+        error_modal('Not logged',"Only for authentified users.");
       }
     </script>
 <div class="main">
