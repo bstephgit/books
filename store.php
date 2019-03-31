@@ -180,7 +180,7 @@ if($action=='userlogin')
   }
   else
   {
-    $_SESSION['error'] = '<h2>Invalid user credentials</h2>';
+    $_SESSION['error'] = '<h4>Invalid user credentials</h4>';
   }
   header('Location: home.php'); 
 }
