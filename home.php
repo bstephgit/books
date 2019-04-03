@@ -37,6 +37,48 @@ if (isset($_SESSION['user']))
 {
   $user = $_SESSION['user'];
 }
+else
+{
+  $link = null;
+  if(isset($_GET['upload']))
+  {
+    $link = 'home.php';
+    if(isset($_COOKIE['browse_backlink']))
+    {
+      $link = $_COOKIE['browse_backlink'];
+    }
+    $_SESSION['error'] = 'Not logged: book upload forbidden';
+  }
+  else if(isset($_GET['edit']))
+  {
+    $_SESSION['error'] = 'Not logged: book edition forbidden';
+    $link = 'home.php?bookid=' . $_GET['edit'];
+  }
+  if($link!=null)
+  {
+    header('Location: ' . $link );
+    exit;
+  }
+}
+
+if(isset($_GET['errid']))
+{
+    $dbase = Database\odbc()->connect();
+    if($dbase)
+    {
+        $errid=$_GET['errid'];
+        $rec=$dbase->query("SELECT * FROM LOGS WHERE ID=$errid");
+        if($rec && $rec->next())
+        {
+            $file=$rec->field_value('FILE');
+            $line=$rec->field_value('LINE');
+            $func=$rec->field_value('FUNCTION');
+            $msg=$rec->field_value('MSG');
+            $_SESSION['error'] = "<h2>ERR: $msg</h2><br><h3>FILE: $file</h3><br><h3>FUNCTION: $func</h3><br> <h3>LINE: $line</h3>";
+        }
+        $dbase->close();
+    }
+}
 $error = '';
 if(isset($_SESSION['error']))
 {
@@ -330,25 +372,6 @@ if(isset($_SESSION['error']))
             else //page or subject or search
             {
                \utils\printFooterLinks($order);
-            }
-            if(isset($_GET['errid']))
-            {
-                $dbase = Database\odbc()->connect();
-                if($dbase)
-                {
-                    $errid=$_GET['errid'];
-                    $rec=$dbase->query("SELECT * FROM LOGS WHERE ID=$errid");
-                    if($rec && $rec->next())
-                    {
-                        $file=$rec->field_value('FILE');
-                        $line=$rec->field_value('LINE');
-                        $func=$rec->field_value('FUNCTION');
-                        $msg=$rec->field_value('MSG');
-                        echo "<h2>ERR: $msg</h2><br>";
-                        echo "<h3>FILE: $file</h3><br><h3>FUNCTION: $func</h3><br> <h3>LINE: $line</h3>";
-                    }
-                    $dbase->close();
-                }
             }
         ?>
         </div>
