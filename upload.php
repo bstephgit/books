@@ -29,7 +29,7 @@ if(isset($_FILES) && isset($_FILES['upfile']))
     if ($_FILES['upfile']['error'] > 0)
     {
          header('Location: home.php');
-         $_SESSION['error'] = $_FILES['upfile']['error']);
+         $_SESSION['error'] = $_FILES['upfile']['error'];
          exit();
     }
 
