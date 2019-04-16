@@ -42,13 +42,18 @@ function logBase($level,$msg)
   if(Config::instance()->enabled)
   {
     $e = new Entry();
-
-    $bt=debug_backtrace()[1];
+    $dbgbk = debug_backtrace();
+    $bt = $dbgbk[1];
 
     $e->level=$level;
     $e->file=basename($bt['file']);
     $e->line=$bt['line'];
-    $function = debug_backtrace()[2]['function'];
+
+    $function = "N/A";
+    if (count($dbgbk)>2)
+    {
+      $function = $dbgbk[2]['function'];
+    }
     if(isset($bt['class']))
     {
         $function = $bt['class'] . '::' . $function;

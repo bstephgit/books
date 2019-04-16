@@ -182,34 +182,34 @@ class PCloudDrive extends Drive\Client
             );
     }
 		
-		public function downloadLink($fileid)
+	public function downloadLink($fileid)
+	{
+		if($this->isLogged())
 		{
-			if($this->isLogged())
+			$access_token=$this->getAccessToken();
+			
+			$download_url = self::API_URL . '/getfilelink?access_token=' . $access_token . '&fileid=' . $fileid  . '&forcedownload=1';
+			if($this->useDownloadProxy())
 			{
-				$access_token=$this->getAccessToken();
-				
-				$download_url = self::API_URL . '/getfilelink?access_token=' . $access_token . '&fileid=' . $fileid  . '&forcedownload=1';
-				if($this->useDownloadProxy())
-				{
-					$options=array();
+				$options=array();
 
-					$resp=json_decode($this->curl_request($download_url,$options));
-					if($resp->result!=0)
-					{
-						throw new \Exception('cannot get file link: ' . strval($resp->result));
-					}
-					$download_url= 'https://' . $resp->hosts[ time() % count($resp->hosts) ] . $resp->path;
-					
-					return array( 'method' => 'GET', 'url' =>  $download_url, 'headers' => array() );
+				$resp=json_decode($this->curl_request($download_url,$options));
+				if($resp->result!=0)
+				{
+					throw new \Exception('cannot get file link: ' . strval($resp->result));
 				}
+				$download_url= 'https://' . $resp->hosts[ time() % count($resp->hosts) ] . $resp->path;
 				
-				return array( 'method' => 'GET', 'url' =>  $download_url );
+				return array( 'method' => 'GET', 'url' =>  $download_url, 'headers' => array() );
 			}
-			else
-			{
-					throw new \Exception('not logged');
-			}
+			
+			return array( 'method' => 'GET', 'url' =>  $download_url );
 		}
+		else
+		{
+				throw new \Exception('not logged');
+		}
+	}
     private function getBookFolder()
     {
         $url = self::API_URL . '/listfolder?path=' . urlencode('/') . '&' . 'recursive=0' . '&' . 'nofiles=1';
@@ -271,7 +271,7 @@ class PCloudDrive extends Drive\Client
 												'Authorization: Bearer ' . $this->getAccessToken()
 										)
 								);
-            $fileobj=json_decode($this->curl_request($url,$options));;
+                        $fileobj=json_decode($this->curl_request($url,$options));;
 						if(property_exists($fileobj,'sha1'))
 						{	
 							if($fileobj->metadata->parentfolderid!=$folderid)

@@ -1,45 +1,29 @@
 <?php
 
-set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../onedrive-php-sdk/src/Krizalys/Onedrive/'));
+require_once "drive_client_classdef.php";
 
-include_once "drive_client_classdef.php";
 
-require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/Object.php');
-require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/Client.php');
-require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/File.php');
-require_once realpath(dirname(__FILE__) . '/../onedrive-php-sdk/src/Krizalys/Onedrive/Folder.php');
-
-define('CLIENT_ID','000000004018962B');
-define('REDIRECT_URL','https://' . $_SERVER['HTTP_HOST'] . '/books/ms_onedrive.php');
-define('CLIENT_SECRET','XZxVArudOBTAcEvWlO4zlE4bBXCkfm5P');
-define('MS_ONEDRIVE_','MSOD');
+define('CLIENT_ID_OLD', '000000004018962B');
+define('CLIENT_ID', 'ffd664c2-aba8-4284-ba2e-2300b5320387');
+define('REDIRECT_URL', 'https://' . $_SERVER['HTTP_HOST'] . '/books/ms_onedrive.php');
+define('CLIENT_SECRET_OLD', 'XZxVArudOBTAcEvWlO4zlE4bBXCkfm5P');
+define('CLIENT_SECRET', 'mmtOWK94962~qephLTNW}~]');
+define('MS_ONEDRIVE_', 'MSOD');
 
 class MSOneDriveHelper extends Drive\Client
 {
-	private $client;
+    const BASE_AUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0';
+    const AUTH_URL= self::BASE_AUTH_URL . '/authorize';
+    const TOKEN_URL= self::BASE_AUTH_URL . '/token';
+    const SCOPES = 'offline_access%20Directory.ReadWrite.All%20Files.ReadWrite';
+    const API_URL='https://graph.microsoft.com/v1.0';
 
-	public function __construct()
-	{
-		parent::__construct();
-		\Logs\logDebug(var_export($this,true));
-		$option=null;
-		if($this->getSessionVar('onedrive.client.state'))
-		{
-			$option = array('client_id' => CLIENT_ID,'state' => $this->getSessionVar('onedrive.client.state'));
-            
-		}
-		else
-		{
-			$option = array('client_id' => CLIENT_ID);
-		}
-		if($this->token)
-		{
-				$option['state'] = (object) array( 'token' => (object) array( 'obtained' => $this->token->created , 'data' => $this->token) );
-		}
-		\Logs\logDebug(var_export($this,true));
-
-		$this->client = new \Krizalys\Onedrive\Client($option);
-	}
+    public function __construct()
+    {
+        parent::__construct();
+        \Logs\logDebug(var_export($this, true));
+        $option=null;
+    }
 
     public function getDriveVendorName()
     {
@@ -48,118 +32,167 @@ class MSOneDriveHelper extends Drive\Client
 
     public function getRedirectUrl()
     {
-        $login_url = $this->client->getLogInUrl(array('wl.basic','wl.skydrive_update','wl.offline_access'),REDIRECT_URL);
-        $this->setSessionVar('onedrive.client.state',$this->client->getState());
+        $login_url = self::AUTH_URL . '?client_id=' . CLIENT_ID . '&response_type=code&redirect_uri=' . urlencode(REDIRECT_URL) . '&response_mode=query&scope=' . self::SCOPES . '&state=311274';
         return $login_url;
     }
     
     public function isExpired()
     {
-        \Logs\logDebug($this->client->getAccessTokenStatus());
-       return $this->client->getAccessTokenStatus()===-2;
+        try
+        {
+            if(!property_exists($this, 'token') || $this->token==null) { 
+                throw new \Exception('token not found');
+            }
+            if(!property_exists($this->token, 'expires_in') || $this->token->expires_in==null) { 
+                throw new \Exception('expires_in not found');
+            }
+            if(!property_exists($this->token, 'created') || $this->token->created==null) { 
+                throw new \Exception('created not found');
+            }
+            return (($this->token->expires_in + $this->token->created)<=time());
+        }
+        catch(\Exception $e)
+        {
+            \Logs\logErr(var_export($this, true));
+            \Logs\logWarning($e->getMessage());
+        }
+        return false;
     }
     protected function onCode($code)
     {
-        $this->client->obtainAccessToken(CLIENT_SECRET,$code);
-        $state=$this->client->getState();
-        $state->token->data->{'created'} = $state->token->obtained;
-        \Logs\logDebug(var_export($state->token->data,true));
-        $this->set_token( $state->token->data );
+        $body = 'client_id='. CLIENT_ID . '&scope=' . self::SCOPES . '&code=' . $code . '&redirect_uri=' . urlencode(REDIRECT_URL) . '&grant_type=authorization_code&client_secret=' . CLIENT_SECRET;
+
+        $options=array(
+                     CURLOPT_HTTPHEADER => array(
+                         'Content-Type: application/x-www-form-urlencoded'
+                     )
+                );
+
+        $response = $this->curl_post(self::TOKEN_URL, $body, $options);
+
+        if(!$response) {
+            throw new Exception($response->error);
+        }
+        $response = json_decode($response);
+        \Logs\logDebug(var_export($response, true));
+
+        $this->set_token($response);
     }
     public function refreshToken()
     {
-        if($this->token && $this->token->refresh_token)
-        {
+        if(property_exists($this, "token") && property_exists($this->token, "refresh_token") ) {
+
             $options=array( CURLOPT_HTTPHEADER => array( 'Content-Type: application/x-www-form-urlencoded') );
             $body = 'client_id=' . CLIENT_ID . '&redirect_uri=' . urlencode(REDIRECT_URL) . '&client_secret=' . CLIENT_SECRET .
-                    '&refresh_token=' . $this->token->refresh_token . '&grant_type=refresh_token';
-						\Logs\logDebug($body);
-            $response = $this->curl_post('https://login.live.com/oauth20_token.srf',$body,$options);
+                    '&refresh_token=' . $this->token->refresh_token . '&grant_type=refresh_token&scope=' . self::SCOPES;
+            \Logs\logDebug($body);
+            $response = $this->curl_post(self::TOKEN_URL, $body, $options);
 
-            \Logs\logDebug(var_export($response,true));
+            \Logs\logDebug(var_export($response, true));
 
-
-            $state = (object)array('redirect_uri' => null,
-                            'token'       => (object)array( 'obtained' => time(), 'data' => json_decode($response) )
-                );
-            $option = array('client_id' => CLIENT_ID,'state' => $state );
-            $this->client = new \Krizalys\Onedrive\Client($option);
-
-            $state->token->data->{'created'} = $state->token->obtained;
-            \Logs\logDebug(var_export($state->token->data,true));
-
-            $this->set_token( $state->token->data );
-            $this->setSessionVar('onedrive.client.state',$this->client->getState());
+            if(!$response || property_exists($response, "error")) {
+                $this->set_token(null);
+                throw new Exception($response->error);
+            }
+            \Logs\logDebug(var_export($response, true));
+            $this->set_token($response);
         }
         else
         {
-            $this->set_token( null );
-            $this->unsetSessionVar('onedrive.client.state');
+            $this->set_token(null);
             throw new \Exception('refresh token is null');
         }
     }
 
-	public function uploadFile()
-	{
-        if($this->isLogged())
-        {
+    public function uploadFile()
+    {
+        if($this->isLogged()) {
             $book_folder=$this->getBookFolder();
-            $res=$books_folder->createFile($this->getFileName(),file_get_contents('temp/'.$this->getFileName()));
-            if($res instanceof \Krizalys\Onedrive\File)
-            {
-                $this->register_link($res->getId(),$res->getSize());
+            $options = array(CURLOPT_CUSTOMREQUEST => $info['method'], CURLOPT_HTTPHEADER => array('Authorization: Bearer ' . $this->getAccessToken()));
+
+            $info = $this->store_info();
+            
+            $url = str_replace(array('{fileid}','{parentid}'), array($fileid, $book_folder), $info['url']);
+            $body=new CURLFile(realpath('temp/'.$this->getFileName()));
+
+            $res = $this->curl_post($url,$body,$options);
+            
+            if($res) {
+                $res = json_decode($this->curl_post($url,$body,$options));
+                $this->register_link($res->id, $res->size);
             }
             else
             {
-                throw new \Exception('Cannot upload file: ' . var_dump($res));
+                throw new \Exception('Cannot upload file: ' . var_export($res, true));
             }
         }
         else
         {
             throw new \Exception('no token to file uploaded');
         }
-	}
+    }
     public function deleteFile()
     {
-        if($this->isLogged())
-        {
+        if($this->isLogged()) {
             $file_id=$this->getStoreFileId();
-            if($file_id)
+            if($file_id) {
+                $info = $this->store_info()->urls['delete'];
+                $options = array(CURLOPT_CUSTOMREQUEST => $info['method'], CURLOPT_HTTPHEADER => array('Authorization: Bearer ' . $this->getAccessToken()));
+                $url = str_replace('{fileid}', $file_id, $info['url']);
+                $this->curl_request($url,$options);
+            }
+            else
             {
-                $this->client->deleteObject($file_id);
+                \Logs\logWarning('OndeDrive/deleteFile: file id not found');
             }
         }
     }
     public function downloadFile()
     {
-        if($this->isLogged())
-        {
+        if($this->isLogged()) {
             $file_id=$this->getStoreFileId();
-            if($file_id)
-            {
-                $file_obj = new \Krizalys\Onedrive\File($this->client,$file_id);
-                $name=$file_obj->getName();
+            if($file_id) {
+                
+                $info = $this->store_info()->urls['download'];
+                
+                $options = array(CURLOPT_HTTPHEADER => array('Authorization: Bearer ' . $this->getAccessToken()));
+                $res = $this->curl_request(self::API_URL . '/me/drive/items/' . $file_id, $options);
+
+                $name = '';
+                if ($res)
+                {
+                    $name = json_decode($res)->name;
+                }
+                else
+                {
+                    throw new Exception("OneDrive/download: cannot get file name");
+                }
+                $options = array_merge($options, array(CURLOPT_CUSTOMREQUEST => $info['method'], CURLOPT_FOLLOWLOCATION => true));
+                $url = str_replace('{fileid}', $file_id, $info['url']);
+
+                $content = $this->curl_request($url,$options);
 
                 $tmpfile = realpath('temp') . '/' . $name;
-                $content=$file_obj->fetchContent(array(CURLOPT_FOLLOWLOCATION => true));
-                $this->downloadToBrowser($tmpfile,$content);
+                $this->downloadToBrowser($tmpfile, $content);
+            }
+            else{
+                throw new \Exception('OneDrive: cannot downloadFile');
             }
         }
     }
     public function store_info()
     {
-        if($this->isLogged())
-        {
+        if($this->isLogged()) {
             $book_folder=$this->getBookFolder();
             $base_url='https://apis.live.net/v5.0';
 
             return (object) array(
                 'access_token' => $this->getAccessToken(),
-                'book_folder' => $book_folder->getId(),
+                'book_folder' => $book_folder,
                 'urls' => array(
-                    'download' => array( 'method' => 'GET', 'url' => $base_url . '/{fileid}/content?access_token={accesstoken}' ), 
-                    'upload' => array(  'method' => 'POST', 'url' => $base_url . '/{parentid}/files?access_token={accesstoken}' , 'body' => array('file'=>'{filecontent}') ),
-                    'delete' => array('method' => 'DELETE', 'url' => $base_url . '/drive/items/{fileid}') 
+                    'download' => array( 'method' => 'GET', 'url' => self::API_URL . '/me/drive/items/{fileid}/content', 'headers' => (object)array('Authorization: Bearer {accesstoken}') ), 
+                    'upload' => array(  'method' => 'PUT', 'url' => self::API_URL . '/me/drive/items/{parentid}:/{filename}:/content' , 'body' => '{filecontent}', 'headers' => (object)array('Authorization: Bearer {accesstoken}') ),
+                    'delete' => array('method' => 'DELETE', 'url' => self::API_URL . '/me/drive/items/{fileid}', 'headers' => (object)array('Authorization: Bearer {accesstoken}') )
                     )
                 );
         }
@@ -168,36 +201,58 @@ class MSOneDriveHelper extends Drive\Client
             throw new \Exception('not logged');
         }
     }
-		public function downloadLink($fileid)
-		{
-			if($this->isLogged())
-			{
-				$root_url='https://apis.live.net/v5.0';
-				$access_token=$this->getAccessToken();
-				return array( 'method' => 'GET', 'url' =>  sprintf("%s/%s/content?access_token=%s",$root_url,$fileid,$access_token));
-			}
-			else
-			{
-					throw new \Exception('not logged');
-			}
-		}
+    public function downloadLink($fileid)
+    {
+        if($this->isLogged()) {
+            $access_token = $this->getAccessToken();
+            $info = $this->store_info()->urls['download'];
+            return array( 'method' => $info['method'], 'url' => str_replace('{fileid}', $fileid, $info['url']),
+                'headers' => array("Authorization: Bearer $access_token") );
+        }
+        else
+        {
+            throw new \Exception('not logged');
+        }
+    }
     private function getBookFolder()
     {
-        $public_docs=$this->client->fetchDocs();
-        $books_folder=NULL;
-        foreach($public_docs->fetchChildObjects() as $abook)
-        {
-            if($abook->isFolder() && $abook->getName()==='books')
-            {
-                $books_folder=$abook;
-                break;
-            }
+        $books_folder = null;
+        
+        try{
+            $url = self::API_URL . '/me/drive/root:/Documents/Books';
+            $options = array(
+                CURLOPT_HTTPHEADER => array( 'Authorization: Bearer ' . $this->getAccessToken() )
+
+            );
+            $books_folder = json_decode($this->curl_request($url,$options));
+            
+        }catch (\Exception $e){
+            //POST /me/drive/items/{parent-item-id}/children
+            //POST /me/drive/items/{parent-item-id}/children
+            $url = self::API_URL + "/me/drive/root:/Documents/";
+            $response = json_decode($this->curl_request($url));
+
+            $url = self::API_URL . '/me/drive/items/' . $response->id . '/children';
+            $options=array( CURLOPT_HTTPHEADER => array( 'Content-Type: application/json', 'Authorization: Bearer ' . $this->getAccessToken() ) );
+            /*
+                {
+                  "name": "New Folder",
+                  "folder": { },
+                  "@microsoft.graph.conflictBehavior": "rename"
+                }
+            */
+            $body = json_encode(array('name' => 'Books', "folder" => object(), "@microsoft.graph.conflictBehavior" => "rename" ));
+            $books_folder = $this->curl_post($url, $body, $options);
         }
-        if($books_folder==NULL)
-        {
-            $books_folder=$public_docs->createFolder('Books');
+
+        if ($books_folder && $books_folder->id) {
+            \Logs\logDebug("OneDrive Book Id=" + strval($books_folder->id));
+            return $books_folder->id;
         }
-        return $books_folder;
+        else{
+            throw new Exception("OneDrive API: Books folder not found");
+            
+        }
     }
 }
     
