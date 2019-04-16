@@ -44,20 +44,20 @@ Store.prototype.login = function ()
     var request = new XMLHttpRequest();
     var url = self.url;
 		
-		function doerror(err)
-		{
-				var callback = self.onerror;
-				if(callback) callback.call(self,err);
-		}
-		function doresponse(obj)
-		{
-				var callback = self.onlogin;
-				if(callback) callback.call(self,obj);
-		}
+	function doerror(err)
+	{
+			var callback = self.onerror;
+			if(callback) callback.call(self,err);
+	}
+	function doresponse(obj)
+	{
+			var callback = self.onlogin;
+			if(callback) callback.call(self,obj);
+	}
 	
     request.onerror = function (e) {
         console.log('erreur\n' + e);
-				doerror(e);
+		doerror(e);
     };
 
     console.log('login url:',url);
@@ -69,7 +69,7 @@ Store.prototype.login = function ()
         {
             try
             {
-								console.log(request.response);
+				console.log(request.response);
                 var obj = JSON.parse(request.response);
                 if(obj.redirect)
                 {
@@ -77,58 +77,58 @@ Store.prototype.login = function ()
 
                     window.addEventListener("message", function(event) {
 
-														if(event.origin!==window.location.origin) 
-															throw new Error('message not same origin: ' + event.origin);
-														window.removeEventListener("message",this,false);
+							if(event.origin!==window.location.origin) 
+								throw new Error('message not same origin: ' + event.origin);
+							window.removeEventListener("message",this,false);
                             try
                             {
                                 var info = event.data;
-																console.log('got message:',info);
+								console.log('got message:',info);
                                 if(info!=null)
                                 {
-																		var jsonstr = JSON.parse(info);
-																		if(jsonstr.error)
-																		{
-																			 throw new Error(jsonstr.error);
-																		}
+									var jsonstr = JSON.parse(info);
+									if(jsonstr.error)
+									{
+										 throw new Error(jsonstr.error);
+									}
                                     self.store_info = jsonstr;
-																		doresponse(self.store_info);
+									doresponse(self.store_info);
                                 }
-															else
-																throw new Error('login info in message is null');
+								else
+									throw new Error('login info in message is null');
                             }
                             catch (err)
                             {
-															console.error(err);
-															doerror(err);
+								console.error(err);
+								doerror(err);
                             }
                         }
 												, false);
                        
-								}
+				}
                 else if(obj.access_token)
                 {
-									self.store_info=obj;
-                  doresponse(obj);
+					self.store_info=obj;
+                  	doresponse(obj);
                 }
-								else
-								{
-									console.error(obj);
-									throw new Error('unexpected error');
-								}
+				else
+				{
+					console.error(obj);
+					throw new Error('unexpected error');
+				}
             }
             catch (err)
             {
-							console.error(request.response);
-              doerror(err);
+				console.error(request.response);
+              	doerror(err);
             }
         }
         else
         {
             console.log('request returned status',request.status,'text',request.statusText);
-						var err = new Error('status error');
-						err.status = request.status; err.response = request.statusText;
-						doerror(err);
+			var err = new Error('status error');
+			err.status = request.status; err.response = request.statusText;
+			doerror(err);
         }
     };
     request.send();
@@ -136,7 +136,7 @@ Store.prototype.login = function ()
     {
        return request;
     }
-	}
+}
 
 Store.prototype.isLogged = function () {
 	
@@ -150,8 +150,8 @@ Store.prototype.isLogged = function () {
 
 Store.prototype.upload = function (file) {
 
-  if(!this.isLogged())
-  {
+  	if(!this.isLogged())
+  	{
 		throw new Error('not logged');
 	}
 	var self = this;

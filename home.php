@@ -100,27 +100,34 @@ if(isset($_SESSION['error']))
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/md5-min.js'></script>
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
     <script type='text/javascript'>
-          function downloadFile(bookid)
-          {
-            var store = new Store('store.php?action=downloadLink&bookid='+bookid);
+      function downloadFile(bookid)
+      {
+        var store = new Store('store.php?action=downloadLink&bookid='+bookid);
 
-            store.onerror = function (err) {
-              console.error(err);
-              var msg=err.toString();
-              if(err.status){ 
-                var reader = new window.FileReader(); 
-                reader.readAsDataURL(err.response); reader.onloadend = function() 
-                {  var res = reader.result; msg = err.status + " " + atob(res.substr(res.indexOf(',')+1)); alert(msg); }
-              }else{
-                alert(msg);
-              }
-              
-            };
-            store.onlogin = function (obj) {
-              store.download();
-            };
-            store.login();
+        store.onerror = function (err) {
+          console.error(err);
+          var msg=err.toString();
+          if(err.status){ 
+            var reader = new window.FileReader(); 
+            reader.readAsDataURL(err.response); reader.onloadend = 
+
+                                function() 
+                                {   
+                                  var res = reader.result; msg = err.status + " " + 
+                                  atob(res.substr(res.indexOf(',')+1)); alert(msg); 
+                                };
+          }else{
+
+            alert(msg);
+
           }
+          
+        };
+        store.onlogin = function (obj) {
+          store.download();
+        };
+        store.login();
+      }
       function changepage(event)
       {
          var dochange = (event.type==='change') || (event.type==='keyup' && event.keyCode===13);

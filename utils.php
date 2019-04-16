@@ -136,7 +136,7 @@ function sizeUnit($input)
     
     $pace=1024;
 
-    for($i=0; i < count($units); $i++)
+    for($i=0; $i < count($units); $i++)
     {
         $next =  $size/$pace;
         if(intval($next)==0)

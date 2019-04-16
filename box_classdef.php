@@ -191,34 +191,31 @@ class BoxDrive extends Drive\Client
             return (object) array (
                 'access_token' => $this->getAccessToken(),
                 'book_folder' => $book_folder->id ,
-                'urls' => (object)array('download' => (object)array( 'method' => 'GET', 'url' => self::API_URL.'/files/{fileid}/content' ),
-                                'upload' => (object)array( 'method' => 'POST', 'url' => self::UPLOAD_URL ,
-                                                    'headers' => (object)array('Authorization: Bearer {accesstoken}'),
-                                                    'body' => (object)array( 
-																																'attributes' => (object)array('name'=>'{filename}', 'parent'=> (object)array('id'=>'{parentid}')), 
-																																'file' => '{filecontent}' ) ),
-                                'delete' => (object)array('method' => 'DELETE', 'url' => self::API_URL.'/files/{fileid}')
+                'urls' => (object)array(
+                    'download' => (object)array( 'method' => 'GET', 'url' => self::API_URL . '/files/{fileid}/content' ),
+                    'upload' => (object)array( 'method' => 'POST', 'url' => self::UPLOAD_URL , 'headers' => (object)array('Authorization: Bearer {accesstoken}'), 'body' => (object)array( 'attributes' => (object)array('name'=>'{filename}', 'parent'=> (object)array('id'=>'{parentid}')), 'file' => '{filecontent}' ) ),
+                    'delete' => (object)array('method' => 'DELETE', 'url' => self::API_URL.'/files/{fileid}')
                  ) );
         }
         throw new \Exception('not logged');
     }
-		public function downloadLink($fileid)
+	public function downloadLink($fileid)
+	{
+		if($this->isLogged())
 		{
-			if($this->isLogged())
+			$root_url=self::API_URL;
+			$access_token=$this->getAccessToken();
+			if($this->useDownloadProxy())
 			{
-				$root_url=self::API_URL;
-				$access_token=$this->getAccessToken();
-				if($this->useDownloadProxy())
-				{
-					return array( 'method' => 'GET', 'url' =>  sprintf("%s/files/%s/content",$root_url,$fileid), 'headers' => array());
-				}
-				return array( 'method' => 'GET', 'url' =>  sprintf("%s/files/%s/content",$root_url,$fileid), 'headers' => array("Authorization: Bearer $access_token"));
+				return array( 'method' => 'GET', 'url' =>  sprintf("%s/files/%s/content",$root_url,$fileid), 'headers' => array());
 			}
-			else
-			{
-					throw new \Exception('not logged');
-			}
+			return array( 'method' => 'GET', 'url' =>  sprintf("%s/files/%s/content",$root_url,$fileid), 'headers' => array("Authorization: Bearer $access_token"));
 		}
+		else
+		{
+				throw new \Exception('not logged');
+		}
+	}
     private function getBookFolder()
     {
         $url = self::API_URL . '/folders/0/items';
