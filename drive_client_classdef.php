@@ -342,6 +342,9 @@ abstract class Client
             $dbase->query($sql);
             $dbase->close();
         }
+        else{
+            \Logs\logWarning('cannot connect to database: token not saved');
+        }
     }
     protected function downloadToBrowser($tempfile,$content)
     {
