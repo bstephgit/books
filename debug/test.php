@@ -1,8 +1,8 @@
 <?php
 
-include_once "db.php";
-require_once "System.php";
-require_once "onedrive_classdef.php";
+include_once "../db.php";
+//require_once "System.php";
+require_once "../onedrive_classdef.php";
 
 session_start();
 

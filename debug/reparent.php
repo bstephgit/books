@@ -1,6 +1,6 @@
 <?php
 
-require_once "db.php";
+require_once "../db.php";
 
 //header( "Location: drive_client.php?action=reparent&store_code=PCLD" );
 
@@ -31,7 +31,7 @@ if ($dbase)
 <html>
 <head>
 	<title>API Test</title>
-    <script type='text/javascript' src='store.js'></script>
+    <script type='text/javascript' src='../store.js'></script>
 </head>
 <body>
 
@@ -104,6 +104,8 @@ if ($dbase)
 			var url = '/books/store.php?action=login&store_code=' + code;
         	var store = new Store(url);
 
+			document.getElementById('store_data').innerHTML='';
+
         	console.log('login url:', url);
         	store.onlogin = function (obj){
         		console.log(obj);
@@ -111,6 +113,7 @@ if ($dbase)
         		if (store_obj){
         			store_obj.login = obj;
         			if (selected_store.code==code){
+        				console.log('set store code:', code);
         				setStore(code);
         			}
         		}
@@ -133,18 +136,46 @@ if ($dbase)
 ?>
 </td><td><button onclick="refreshLogin()">Refresh</button></td>
 <td>
-Method <select>
-	<option>GET</option>
-	<option>POST</option>
-	<option>PUT</option>
-</select><br>	
-	
-	
-URL <input type='text' id='url'><br>
-Headers <textarea id="request_headers" placeholder="Headers"></textarea><br>
-Body <textarea placeholder="body"></textarea><br>
-</tr></table>
-<div id="store_data"></div>
+	<table style="margin-left: 25px">
+		<tr>
+			<td>Method </td>
+			<td>
+				<select>
+					<option>GET</option>
+					<option>POST</option>
+					<option>PUT</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td>URL</td>
+			<td>
+				<input type='text' id='url' size="72">
+			</td>
+		</tr>
+		<tr>
+			<td>Headers</td>
+			<td>
+				<textarea id="request_headers" placeholder="Headers"></textarea>
+			</td>
+		</tr>
+		<tr>
+			<td>Body</td>
+			<td>
+				<textarea placeholder="body"></textarea>
+			</td>
+		</tr>
+	</table>
+</tr>
+<tr>
+	<td>
+		<div id="store_data"></div>
+	</td>
+	<td>
+		<div id="http_response"></div>
+	</td>
+</tr>
+</table>
 
 
 </body>

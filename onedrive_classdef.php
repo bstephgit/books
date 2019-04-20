@@ -90,9 +90,12 @@ class MSOneDriveHelper extends Drive\Client
 
             \Logs\logDebug(var_export($response, true));
 
-            if(!$response || property_exists($response, "error")) {
+            if(!$response || property_exists(json_decode($response), "error")) {
                 $this->set_token(null);
-                throw new Exception($response->error);
+                if ($response)
+                {
+                    throw new Exception(json_decode($response)->error);
+                }
             }
             \Logs\logDebug(var_export($response, true));
             $this->set_token($response);
