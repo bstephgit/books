@@ -1,6 +1,6 @@
 <?php
-include "db.php";
-include "Log.php";
+include "../db.php";
+include "../Log.php";
 
 if(count($_POST)>0)
 {
@@ -107,7 +107,7 @@ function printSelectControl($id)
 <html>
 <head>
     <title>logs viewer</title>
-    <link type="text/css" rel="stylesheet" href="books.css" />
+    <link type="text/css" rel="stylesheet" href="logview.css" />
     <script type="text/javascript">
         function selectall(chbox)
         {

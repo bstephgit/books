@@ -19,7 +19,7 @@
         <password>Motdepasse21!</password>
     </host>
     <host name="localhost">
-        <server>mysqlserver</server>
+        <server>localhost</server>
         <base>bookstoredb</base>
         <user>dbuser</user>
         <password>aldu</password>

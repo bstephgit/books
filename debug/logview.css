@@ -1,0 +1,35 @@
+/* log view*/
+body.logview
+{
+  background-color: #3f3f3f;
+  color: white;
+  font-family: "arial", Serif;
+}
+tr.error
+{
+    color: #e97368;
+    font-size: 0.8em;
+    outline: thin solid darkgray;
+}
+tr.warning
+{
+    color: gold;
+    font-size: 0.8em;
+    outline: thin solid darkgray;
+}
+tr.info
+{
+    color: #2372c9;
+    font-size: 0.8em;
+    outline: thin solid darkgray;
+}
+tr.debug
+{
+    color: lightgray;
+    font-size: 0.8em;
+    outline: thin solid darkgray;
+}
+.fixed_width_450
+{
+    width: 450px;
+}

@@ -20,7 +20,7 @@
     </host>
     <host name="localhost">
         <server>localhost</server>
-        <base>bookstoredb</base>
+        <base>bookstoredb_test</base>
         <user>dbuser</user>
         <password>aldu</password>
     </host>

@@ -2,7 +2,6 @@
 
 include_once "../db.php";
 //require_once "System.php";
-require_once "../onedrive_classdef.php";
 
 session_start();
 
@@ -98,13 +97,12 @@ function test_db()
 				$dbase = \Database\odbc()->connect();
         //$dbase = @mysqli_connect( 'localhost', 'dbuser', 'aldu', 'bookstoredb');
 				if ($dbase){
-            $rec=$dbase->query('SELECT * FROM FILE_STORE WHERE VENDOR_CODE=\'MSOD\'');
+            $rec=$dbase->query('SELECT * FROM FILE_STORE WHERE VENDOR_CODE=\'OBM\'');
             if ($rec->next())
             {
               $log_info = $rec->field_value('LOGIN_INFO');
               echo '<p> LOG INFO = ' . $log_info . '</p>';
             }
-            $sql="UPDATE FILE_STORE SET LOGIN_INFO=NULL WHERE VENDOR_CODE='MSOD'";
             $dbase->query($sql);
 						echo '<span style="color:green">database connected</span>';
             $dbase->close();

@@ -7,15 +7,16 @@ set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-p
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-php-client/src/Google'));
 set_include_path(get_include_path() . PATH_SEPARATOR . realpath('../google-api-php-client/src/Google/Service'));
 
-require_once realpath('../google-api-php-client/src').'/Google/Auth/OAuth2.php';
-require_once realpath('../google-api-php-client/src').'/Google/Client.php';
-require_once realpath('../google-api-php-client/src').'/Google/Service.php';
-require_once realpath('../google-api-php-client/src').'/Google/Model.php';
-require_once realpath('../google-api-php-client/src').'/Google/Config.php';
-require_once realpath('../google-api-php-client/src').'/Google/Collection.php';
-require_once realpath('../google-api-php-client/src').'/Google/Service/Resource.php';
-require_once realpath('../google-api-php-client/src').'/Google/Service/Drive.php';
-require_once realpath('../google-api-php-client/src').'/Google/Auth/AssertionCredentials.php';
+
+require_once 'Google/Auth/OAuth2.php';
+require_once 'Google/Client.php';
+require_once 'Google/Service.php';
+require_once 'Google/Model.php';
+require_once 'Google/Config.php';
+require_once 'Google/Collection.php';
+require_once 'Google/Service/Resource.php';
+require_once 'Google/Service/Drive.php';
+require_once 'Google/Auth/AssertionCredentials.php';
 
 define('DRIVE_SCOPE', 'https://www.googleapis.com/auth/drive');
 define('SERVICE_ACCOUNT_EMAIL', 'incinerator-book-store@velvety-tube-124123.iam.gserviceaccount.com');
@@ -33,11 +34,11 @@ class GoogleDriveHelper extends Drive\Client
         parent::__construct();
         $this->buildAuth();
     }
-		public function setFileName($file_name)
-		{
-			$this->drive_file->setName($file_name);
-			parent::setFileName($file_name);
-		}
+	public function setFileName($file_name)
+	{
+		$this->drive_file->setName($file_name);
+		parent::setFileName($file_name);
+	}
     public function getDriveVendorName()
     {
         return GOOGLE_;
