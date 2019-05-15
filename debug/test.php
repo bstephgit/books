@@ -96,6 +96,7 @@ function test_db()
         unset($_SESSION['ODBC']);
 				$dbase = \Database\odbc()->connect();
         //$dbase = @mysqli_connect( 'localhost', 'dbuser', 'aldu', 'bookstoredb');
+        echo '<h5>' . var_export($_SESSION['ODBC'],true) . '</h5>';
 				if ($dbase){
             $rec=$dbase->query('SELECT * FROM FILE_STORE WHERE VENDOR_CODE=\'OBM\'');
             if ($rec->next())

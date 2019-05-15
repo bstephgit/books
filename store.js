@@ -126,7 +126,7 @@ Store.prototype.login = function ()
         else
         {
             console.log('request returned status',request.status,'text',request.statusText);
-			var err = new Error('status error');
+			var err = new Error('Login failed:\n Status error [' + request.status + ']\n' + request.statusText);
 			err.status = request.status; err.response = request.statusText;
 			doerror(err);
         }
@@ -407,7 +407,7 @@ Store.prototype.download = function()
 				
 				var download_url = JSON.parse(req.response);
 				
-				if(download_url.error){	alert(download_url.error);	doerror(new Errror(download_url.error)); return; }
+				if(download_url.error){	alert(download_url.error);	doerror(new Error(download_url.error)); return; }
 				
 				window.open( 'https://' + download_url.hosts[0] + download_url.path );
 				

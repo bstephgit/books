@@ -308,7 +308,7 @@ document.addEventListener("DOMContentLoaded", function() {
    			function doerror(err){
 					console.error(err);
 					if(err.message)
-						alert("message:"+err.message);
+						alert(err.message);
 					else
 					{
 						var outputstr = '';
@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", function() {
 						{
 							outputstr = prop + ' : ' + err[prop] + '\n';
 						}
-						//alert(outputstr);
+						alert(outputstr);
 					}
 						
 				}
@@ -390,11 +390,11 @@ document.addEventListener("DOMContentLoaded", function() {
 						
 						store.onresponse = function(resp){ submit_btn.disabled = false; };
 						//uploader.store = store;
-						promise.catch(doerror).then( function() { return new Promise(function(fulfill,reject) {  
+						promise.then( function() { return new Promise(function(fulfill,reject) {  
 								store.onerror = function(err){ submit_btn.disabled = false; reject(err); };	
 								store.onresponse = function(status,resp)  { submit_btn.disabled = false; fulfill([status,resp]) };
 								store.upload(file);
-						} ); }).catch(doerror).then(submitForm).catch(doerror);
+						} ); }).then(submitForm).catch(doerror);
 
 						submit_btn.disabled = true;
 				}

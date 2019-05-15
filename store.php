@@ -36,22 +36,32 @@ if($action==='login')
       echo '{"error":"no vendor store code"}';
       exit;
     }
-    $client=\utils\checkLogin($store);
-    if($client)
+    try{
+
+      $client=\utils\checkLogin($store);
+      if($client)
+      {
+        $info=json_encode($client->store_info(),JSON_UNESCAPED_SLASHES );
+        if($html==='true') //browser is wating html code to process login info
+        {
+            $info=sprintf($html_response,$info);
+            \Logs\logDebug($info);
+            echo $info;
+        }
+        else
+        {
+            \Logs\logDebug('raw resp: ' . $info);
+            echo $info;
+        }
+      }
+    } 
+    catch (\Exception $e)
     {
-      $info=json_encode($client->store_info(),JSON_UNESCAPED_SLASHES );
-      if($html==='true') //browser is wating html code to process login info
-      {
-          $info=sprintf($html_response,$info);
-          \Logs\logDebug($info);
-          echo $info;
-      }
-      else
-      {
-          \Logs\logDebug('raw resp: ' . $info);
-          echo $info;
-      }
+      http_response_code(500);
+      echo $e->getMessage();
+      exit;
     }
+    
 }
 
 

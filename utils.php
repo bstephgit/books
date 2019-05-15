@@ -10,6 +10,7 @@ include_once "google_classdef.php";
 include_once "onedrive_classdef.php";
 include_once "pcloud_classdef.php";
 include_once "hubic_classdef.php";
+include_once "oboom_classdef.php";
 
 
 function createDriveClient($drive_code)
@@ -22,6 +23,7 @@ function createDriveClient($drive_code)
         case 'BOX': return new \BoxDrive();
         case 'PCLD': return new \PCloudDrive();
         case 'HUB': return new \HubicDrive();
+        case 'OBM': return new \OboomDrive();
         default: throw new \Exception('Unknown code for store: ' . $drive_code);
     }
 }

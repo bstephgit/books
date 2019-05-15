@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odbc>
+    <host name="localhost">
+        <server>localhost</server>
+        <base>bookstoredb_test</base>
+        <user>dbuser</user>
+        <password>aldu</password>
+    </host>
+</odbc>
