@@ -408,7 +408,7 @@ function selectOrCreateSubject($db,$subject_name)
     {
       return $rec->field_value('ID');
     }
-    $sql_create='INSERT INTO IT_SUBJECT(NAME) VALUES(\'' . $subject_name . '\')';
+    $sql_create='INSERT INTO IT_SUBJECT(NAME,PERMANENT) VALUES(\'' . $subject_name . '\',0)';
     $db->query($sql_create);
     $rec=$db->query($sql);
     if($rec->next())
