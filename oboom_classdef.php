@@ -136,7 +136,7 @@ class OboomDrive extends Drive\Client
             {
 
                 $the_file= new CURLFile(realpath('temp/'.$this->getFileName()),'application/octet-stream',$file_name);
-                $url = API_URL . '/' . self::VERSION . '/ul?token=' . TOKEN . '&parent=' . $book_folder->id;
+                $url = self::API_URL . '/' . self::VERSION . '/ul?token=' . TOKEN . '&parent=' . $book_folder->id;
                 $body=array(
                            'file' => $the_file,
                        );
@@ -182,10 +182,10 @@ class OboomDrive extends Drive\Client
                 'book_folder' => $book_folder->id ,
                 'urls' => (object)array('download' => (object)array( 'method' => 'GET', 'url' => self::API_URL . '/' . self::VERSION . '/dl?token={accesstoken}&item={fileid}'),
                                 
-                                'upload' => (object)array( 'method' => 'POST', 'url' => self::UPLOAD_URL . '?token={accesstoken}&parent={parentid}',
-                                                    'headers' => (object)array('Content-Type: multipart/form-data'),
+                                'upload' => (object)array( 'method' => 'POST', 'url' => "proxy.php?action=upload",
+                                                    'headers' => (object)array( /*'Content-Type: multipart/form-data',*/ 'XForward-To-Url: ' . urlencode(self::UPLOAD_URL), 'XForward-Query: token={accesstoken}&parent={parentid}' ),
                                                     'body' => (object)array( 'file' => '{filecontent}' ) ),
-                                'delete' => (object)array('method' => 'GET', 'url' => self::API_URL . '/' . self::VERSION . '/rm?token={accesstoken}&items={}' ) 
+                                'delete' => (object)array('method' => 'GET', 'url' => self::API_URL . '/' . self::VERSION . '/rm?token={accesstoken}&items={fileid}' ) 
                             )
                  );
         }
@@ -197,7 +197,8 @@ class OboomDrive extends Drive\Client
 		{
 			$root_url=self::API_URL;
 			$access_token=$this->getAccessToken();
-			return array( 'method' => 'GET', 'url' =>  sprintf("%s/dl?token=%s&item=%s",$root_url,$access_token,$fileid), 'headers' => array());
+            $url = 'proxy.php?url=' . urlencode(sprintf("%s/dl?token=%s&item=%s",$root_url,$access_token,$fileid));
+			return array( 'method' => 'GET', 'url' =>  $url, 'headers' => array());
 		}
 		else
 		{
@@ -213,7 +214,7 @@ class OboomDrive extends Drive\Client
         }
         return $folder;
     }
-	public function useDownloadProxy() { return false; }
+	public function useDownloadProxy() { return true; }
 
     private function _make_folder($parent_id, $folder_name)
     {

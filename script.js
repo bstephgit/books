@@ -321,12 +321,24 @@ document.addEventListener("DOMContentLoaded", function() {
 						
 				}
 			
-				function submitForm()
+				var submitForm = function ()
 				{
-					console.log(arguments[0][0],arguments[0][1]);
-																
-					var status = arguments[0][0];
-					var response = JSON.parse( arguments[0][1] );
+					var req = arguments[0];
+          try{
+            if(!req) { throw 'Bad parameter: Request is null'; }
+  
+            var content_type = req.getResponseHeader('Content-Type');
+            if (content_type=='application/json')
+            {
+              response = JSON.parse( req.responseText );
+            }
+            else
+              throw 'Reponse bad content type: ' + content_type;
+          }catch(err){
+            console.error('[File upload]  Json parse error: ', err);
+            throw err;
+          }
+					 
 					if(status < 400)
 					{
 						var id;
@@ -347,11 +359,12 @@ document.addEventListener("DOMContentLoaded", function() {
 					{
 						throw new Error(JSON.stringify(response));
 					}	
-				}
+				};
+
         var ok = true;
-				// do_upload_file: true if upload mode, false if update mode
-				var do_upload_file = (file_input!==null);
-        if(do_upload_file && file_input.files.length===0)
+				// ready_for_upload: true if upload mode, false if update mode
+				var ready_for_upload = (file_input!==null);
+        if(ready_for_upload && file_input.files.length===0)
         {
 					alert('error: no file selected');
 					ok = false;
@@ -367,8 +380,8 @@ document.addEventListener("DOMContentLoaded", function() {
 						ok = false;
         }
         
-				do_upload_file = do_upload_file && ok;
-				if(do_upload_file)
+				ready_for_upload = ready_for_upload && ok;
+				if(ready_for_upload)
 				{
 
 						var submit_btn = document.getElementById('submit_btn');
@@ -392,7 +405,7 @@ document.addEventListener("DOMContentLoaded", function() {
 						//uploader.store = store;
 						promise.then( function() { return new Promise(function(fulfill,reject) {  
 								store.onerror = function(err){ submit_btn.disabled = false; reject(err); };	
-								store.onresponse = function(status,resp)  { submit_btn.disabled = false; fulfill([status,resp]) };
+								store.onresponse = function(req)  { submit_btn.disabled = false; fulfill(req); };
 								store.upload(file);
 						} ); }).then(submitForm).catch(doerror);
 

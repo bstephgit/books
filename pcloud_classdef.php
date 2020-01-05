@@ -246,7 +246,7 @@ class PCloudDrive extends Drive\Client
         }
         return $response->metadata;
     }
-		public function useDownloadProxy() { return false; }
+		public function useDownloadProxy() { return true; }
 		
 		protected function reparent()
 		{

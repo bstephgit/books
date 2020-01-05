@@ -147,9 +147,13 @@ class Config
     }
     private function load()
     {
-        if(file_exists ('logs.json'))
+        if(file_exists ('debug/logs.json'))
         {
-          $this->_config=json_decode(file_get_contents('logs.json'));
+          $this->_config=json_decode(file_get_contents('debug/logs.json'));
+        }
+        else if(file_exists ('./logs.json'))
+        {
+          $this->_config=json_decode(file_get_contents('./logs.json'));
         }
        
     }

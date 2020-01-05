@@ -52,7 +52,7 @@ function printLogEntries()
 				default:
 					$sql_where_list='WHERE FALSE';
 			}
-			if($rec=$dbase->query('SELECT * FROM LOGS ' . $sql_where_list . ' ORDER BY TIME'))
+			if($rec=$dbase->query('SELECT * FROM LOGS ' . $sql_where_list . ' ORDER BY ID'))
 			{
 					while($rec->next())
 					{
@@ -132,16 +132,19 @@ function printSelectControl($id)
                 }
             }
         }
-				function enablelogs(me)
-				{
-					var url = new URL(window.location);
-					window.location =  url.origin + url.pathname + '?logenabled=' + me.checked;
-				}
-				function onLevelChange(me)
-				{
-					var url = new URL(window.location);
-					window.location =  url.origin + url.pathname + '?loglevel=' + me.value;
-				}
+		function enablelogs(me)
+		{
+			var url = new URL(window.location);
+			window.location =  url.origin + url.pathname + '?logenabled=' + me.checked;
+		}
+		function onLevelChange(me)
+		{
+			var url = new URL(window.location);
+			window.location =  url.origin + url.pathname + '?loglevel=' + me.value;
+		}
+		function reload(){
+			window.location = window.location;
+		}
     </script>
 </head>
 <body class='logview'>
@@ -152,12 +155,12 @@ function printSelectControl($id)
 
     <form id="log_form" action="logview.php" method="POST">
         <input type="submit" value="delete" />
-				<button onclick='window.location.reload();'> refresh	</button>
+				<button onclick='reload();'> refresh	</button>
         
 				<?php printLogEntries();	?>
            
         <input type="submit" value="delete"/>
-			<button onclick='window.location.reload();'> refresh</button>
+			<button onclick='reload();'> refresh</button>
     </form>
     <input type="checkbox" id="chbot_1" onchange="selectall(this)" /> Select All
 		<input type="checkbox" id="chbot_2" onchange="enablelogs(this)" />Logs ebnabled

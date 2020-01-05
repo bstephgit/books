@@ -233,7 +233,7 @@ abstract class Client
         );
 
         if($options) {
-            $whole_options=$whole_options + $options;
+            $whole_options=$options+$whole_options;//first array overrides default options
         }
         curl_setopt_array($curl, $whole_options);
         $result = curl_exec($curl);

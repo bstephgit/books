@@ -33,9 +33,9 @@ function Store(url)
 {
     this.url = url;
     this.store_info = null;
-		this.onerror = undefined;
-		this.onresponse = undefined;
-		this.onlongin = undefined;
+	this.onerror = undefined;
+	this.onresponse = undefined;
+	this.onlongin = undefined;
 }
 
 Store.prototype.login = function ()
@@ -92,7 +92,7 @@ Store.prototype.login = function ()
 										 throw new Error(jsonstr.error);
 									}
                                     self.store_info = jsonstr;
-									doresponse(self.store_info);
+									doresponse(jsonstr);
                                 }
 								else
 									throw new Error('login info in message is null');
@@ -102,8 +102,7 @@ Store.prototype.login = function ()
 								console.error(err);
 								doerror(err);
                             }
-                        }
-												, false);
+                        }, false);
                        
 				}
                 else if(obj.access_token)
@@ -132,10 +131,6 @@ Store.prototype.login = function ()
         }
     };
     request.send();
-    this.getRequest = function()
-    {
-       return request;
-    }
 }
 
 Store.prototype.isLogged = function () {
@@ -157,14 +152,13 @@ Store.prototype.upload = function (file) {
 	var self = this;
 	function doerror(err)
 	{
-			var callback = self.onerror;
-			if(callback) callback.call(self,err);
+		var callback = self.onerror;
+		if(callback) callback.call(self,err);
 	}
-	function doresponse()
+	function doresponse(req)
 	{
-			var callback = self.onresponse;
-			var args = Array.from(arguments);
-			if(callback) callback.apply(self,args);
+		var callback = self.onresponse;
+		if(callback) callback.apply(self,req);
 	}
 	
 	var req = new XMLHttpRequest();
@@ -174,7 +168,7 @@ Store.prototype.upload = function (file) {
 		document.getElementById('upl-in1').style.width = percentComplete + '%';
 	};
 	req.onload = function(){
-		doresponse(req.status,req.response);
+		doresponse(req);
 	};
 	req.onerror = function(e){
 		doerror(e);
@@ -251,10 +245,6 @@ Store.prototype.upload = function (file) {
 	}
 	
 	req.send(formData);
-	
-	this.getRequest = function(){
-		 return req;
-  }
 }; 
 
 Store.prototype.download = function()
@@ -407,7 +397,7 @@ Store.prototype.download = function()
 				
 				var download_url = JSON.parse(req.response);
 				
-				if(download_url.error){	alert(download_url.error);	doerror(new Error(download_url.error)); return; }
+				if(download_url.error){	alert(download_url.error);	doerror(req); return; }
 				
 				window.open( 'https://' + download_url.hosts[0] + download_url.path );
 				
