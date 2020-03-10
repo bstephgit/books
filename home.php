@@ -96,6 +96,7 @@ if(isset($_SESSION['error']))
     <script type='text/javascript' src='store.js'></script>
     <script type='text/javascript' src='script.js'></script>
     <script type='text/javascript' src='tags.js'></script>
+    <script type='text/javascript' src='preview.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js'></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/md5-min.js'></script>
     <script type='text/javascript' src='../pdf.js/build/pdf.js'></script>
@@ -111,15 +112,15 @@ if(isset($_SESSION['error']))
             var reader = new window.FileReader(); 
             reader.readAsDataURL(err.response); reader.onloadend = 
 
-                                function() 
-                                {   
-                                  var res = reader.result; msg = err.status + " " + 
-                                  atob(res.substr(res.indexOf(',')+1)); alert(msg); 
-                                };
+              function() 
+              {   
+                var res = reader.result; msg = err.status + " " + 
+                atob(res.substr(res.indexOf(',')+1)); alert(msg); 
+              };
+
           }else{
 
-            alert(msg);
-
+            error_modal("Error download", msg);
           }
           
         };
@@ -281,24 +282,6 @@ if(isset($_SESSION['error']))
 </div>
   <script type='text/javascript'>
       
-      function get_modal(){
-        return document.getElementById('modal_id');
-      }
-    
-      function set_modal_title(str)
-      {
-        document.getElementById("modal_title").innerHTML = str;
-      }
-    
-      function set_modal_content(str)
-      {
-        document.getElementById("modal_content").innerHTML = str;
-      }
-      
-      function show_modal()
-      {
-          get_modal().style.display = "block";
-      }
       function user_login()
       {
         set_modal_title( '<h3>Please Login</h3>' );
@@ -332,12 +315,6 @@ if(isset($_SESSION['error']))
         if (event.target == modal) {
           modal.style.display = "none";
         }
-      }
-      function error_modal(title,error_msg)
-      {
-        set_modal_title('<table class=\'nav_element\' style=\'margin: 10px\'><tr><td><img src=\'error.png\'></td><td><h3 style=\'margin-top: 15px\'>' + title + '</h3></td></tr></table>');
-        set_modal_content(error_msg);
-        show_modal();
       }
       <?php
       //show error

@@ -33,6 +33,7 @@ if($action==='login')
     if(strlen($store)==0)
     {
       http_response_code(400);
+      header("Content-Type: application/json");
       echo '{"error":"no vendor store code"}';
       exit;
     }
@@ -44,6 +45,7 @@ if($action==='login')
       {
           $info=sprintf($html_response,$info);
           \Logs\logDebug($info);
+          header("Content-Type: text/html");
           echo $info;
       }
       else
@@ -61,6 +63,8 @@ if($action==='downloadLink')
   {
     http_response_code(400);
     \Logs\logError("book id null");
+    header("Content-Type: application/json");
+
     echo '{"error" : "book id null" }';
     exit;
   }
@@ -97,10 +101,12 @@ if($action==='downloadLink')
         \Logs\logInfo(var_export($result,true));
         if($html==='true')
         {
+          header("Content-Type: text/html");
           echo sprintf($html_response,$result);
         }
         else
         {
+          header("Content-Type: application/json");
           echo $result;
         }
       }
@@ -108,7 +114,8 @@ if($action==='downloadLink')
     }
     else {
       \Logs\logError("book not found in database");
-      http_response_code(400); 
+      http_response_code(404); 
+      header("Content-Type: application/json");
       echo '{ "error": "book not found in database" }'; 
     }
     
@@ -118,6 +125,7 @@ if($action==='downloadLink')
   {
     http_response_code(400);
     \Logs\logError("cannot open database");
+    header("Content-Type: application/json");
     echo '{"error":"cannot open database"}';
   }
 }
@@ -136,6 +144,7 @@ if($action==='taglist' && strlen($tag)>0)
   }
   $dbase->close();
   \Logs\logDebug(json_encode($res));
+  header("Content-Type: application/json");
   echo json_encode($res);
 }
 if($action==='newtag' && strlen($tag)>0)
@@ -159,6 +168,7 @@ if($action==='newtag' && strlen($tag)>0)
     $res = json_encode((object)array('id' => $rec->field_value('ID'),'name' => $rec->field_value('NAME')));
   }
   $dbase->close();
+  header("Content-Type: application/json");
   echo $res;
 }
 if($action=='userlogin')

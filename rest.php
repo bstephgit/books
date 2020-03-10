@@ -4,7 +4,7 @@ include_once "utils.php";
 include_once "Log.php" ;
 include_once "dbTransactions.php";
 
-function getBook($id,$database)
+function getBook($id,$database,$do_login=false)
 {
   $obj=null;
   $query_str="SELECT ID,TITLE,YEAR,DESCR,AUTHORS,SIZE,IMG_PATH,HASH FROM BOOKS WHERE ID=$id";
@@ -45,9 +45,12 @@ function getBook($id,$database)
      }
     try
     {
-      $drive = \utils\createDriveClient($link->vendor_code);
-      $drive->login();
-      $link->access_token = $drive->getAccessToken();
+      if ($do_login)
+      {
+        $drive = \utils\createDriveClient($link->vendor_code);
+        $drive->login();
+        $link->access_token = $drive->getAccessToken();
+      }
       $obj->link = $link;
     }
     catch(\Exception $e)

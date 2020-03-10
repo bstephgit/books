@@ -70,7 +70,7 @@ abstract class Client
     }
     public function getAccessToken()
     {
-        \Logs\logDebug(var_export($this,true));
+        //\Logs\logDebug(var_export($this,true));
         if($this->token && $this->token->access_token) 
         {
          return $this->token->access_token;

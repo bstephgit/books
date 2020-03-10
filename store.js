@@ -33,9 +33,9 @@ function Store(url)
 {
     this.url = url;
     this.store_info = null;
-		this.onerror = undefined;
-		this.onresponse = undefined;
-		this.onlongin = undefined;
+	this.onerror = undefined;
+	this.onresponse = undefined;
+	this.onlongin = undefined;
 }
 
 Store.prototype.login = function ()
@@ -47,6 +47,8 @@ Store.prototype.login = function ()
 	function doerror(err)
 	{
 			var callback = self.onerror;
+			err.title = "Error login";
+			err.content = request.getResponseHeader('Content-Type') || 'text/plain';
 			if(callback) callback.call(self,err);
 	}
 	function doresponse(obj)
@@ -70,6 +72,10 @@ Store.prototype.login = function ()
             try
             {
 				console.log(request.response);
+				var content_type = request.getResponseHeader('Content-Type');
+				if (content_type && content_type !== 'application/json'){
+					throw request.response;
+				}
                 var obj = JSON.parse(request.response);
                 if(obj.redirect)
                 {
@@ -128,6 +134,7 @@ Store.prototype.login = function ()
             console.log('request returned status',request.status,'text',request.statusText);
 			var err = new Error('status error');
 			err.status = request.status; err.response = request.statusText;
+			err.title = "Error login";
 			doerror(err);
         }
     };
