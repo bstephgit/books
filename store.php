@@ -51,6 +51,7 @@ if($action==='login')
       else
       {
           \Logs\logDebug('raw resp: ' . $info);
+          header("Content-Type: application/json");
           echo $info;
       }
     }

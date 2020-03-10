@@ -74,7 +74,7 @@ Store.prototype.login = function ()
 				console.log(request.response);
 				var content_type = request.getResponseHeader('Content-Type');
 				if (content_type && content_type !== 'application/json'){
-					throw request.response;
+					throw new Error(request.response);
 				}
                 var obj = JSON.parse(request.response);
                 if(obj.redirect)

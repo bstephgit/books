@@ -46,6 +46,7 @@ function checkLogin($vendor_store)
             }
         }
         \Logs\logDebug('checkLogin: redirect ' . $client->getRedirectUrl());
+        header("Content-Type: application/json");
         echo json_encode( (object)array( 'redirect' => $client->getRedirectUrl() ) );
         exit;
     }

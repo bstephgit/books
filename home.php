@@ -115,12 +115,13 @@ if(isset($_SESSION['error']))
               function() 
               {   
                 var res = reader.result; msg = err.status + " " + 
-                atob(res.substr(res.indexOf(',')+1)); alert(msg); 
+                atob(res.substr(res.indexOf(',')+1)); 
+                error_modal(err.title || "Error download",msg); 
               };
 
           }else{
 
-            error_modal("Error download", msg);
+            error_modal(err.title || "Error download", msg);
           }
           
         };
